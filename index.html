@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perler Bead Color Chart — Complete Coded Palette</title>
+<meta name="description" content="Complete list of every numbered Perler fuse bead color with Perler color codes, SKU numbers, and hex values.">
+<style>
+:root{
+  --bg:#101218; --panel:#171a22; --card:#1c202b; --line:#2a2f3d;
+  --text:#e8eaf0; --dim:#9aa3b5; --accent:#ff5d8f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.45}
+header{padding:48px 20px 24px;text-align:center;background:
+  radial-gradient(600px 240px at 15% 0%,rgba(255,93,143,.14),transparent),
+  radial-gradient(600px 240px at 85% 0%,rgba(80,170,255,.12),transparent)}
+h1{font-size:clamp(1.6rem,4vw,2.6rem);letter-spacing:.5px}
+h1 .dot{display:inline-block;width:.55em;height:.55em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd66e,#e8912d);box-shadow:0 0 0 4px rgba(232,145,45,.25);margin:0 .18em -2px}
+.sub{color:var(--dim);max-width:720px;margin:10px auto 0;font-size:.98rem}
+.count{display:inline-block;margin-top:16px;padding:6px 18px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-weight:600}
+.count b{color:var(--accent)}
+.controls{max-width:1100px;margin:26px auto 6px;padding:0 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center}
+#search{flex:1 1 320px;max-width:480px;padding:11px 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:1rem;outline:none}
+#search:focus{border-color:#46506a}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:1100px;margin:14px auto;padding:0 20px}
+.chip{cursor:pointer;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--dim);font-size:.85rem;user-select:none;transition:.15s}
+.chip:hover{color:var(--text)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.grid{max-width:1280px;margin:18px auto 60px;padding:0 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:34px 14px 13px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;cursor:pointer;transition:transform .12s,border-color .12s;position:relative}
+.card:hover{transform:translateY(-3px);border-color:#414b63}
+.bead{width:64px;height:64px;border-radius:50%;position:relative;flex:none;
+  background-image:radial-gradient(circle at 32% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 42%),
+                   radial-gradient(circle at 70% 75%,rgba(0,0,0,.25),rgba(0,0,0,0) 50%);
+  box-shadow:inset 0 -4px 8px rgba(0,0,0,.35),inset 0 3px 6px rgba(255,255,255,.18),0 3px 8px rgba(0,0,0,.4)}
+.bead::after{content:"";position:absolute;inset:0;margin:auto;width:40%;height:40%;border-radius:50%;
+  background:inherit;background-image:none;filter:brightness(.72) saturate(1.05);
+  box-shadow:inset 0 3px 5px rgba(0,0,0,.55),inset 0 -2px 3px rgba(255,255,255,.12)}
+.bead.flat::after{display:none}
+.card:hover .bead::after{transform:scale(1.08)}
+.pcode{position:absolute;top:10px;left:12px;font-size:.78rem;font-weight:700;color:var(--dim);letter-spacing:.4px}
+.newtag{position:absolute;top:9px;left:12px;font-size:.62rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#0f1a12;background:#5ee38a;padding:3px 9px;border-radius:999px}
+.type-tag{position:absolute;top:8px;right:10px;font-size:.62rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#fff;background:#39415a;padding:3px 8px;border-radius:999px}
+.name{font-weight:700;font-size:.95rem}
+.meta{font-size:.78rem;color:var(--dim)}
+.meta small{display:block;font-size:.7rem;color:#6f7890}
+.hexrow{display:flex;align-items:center;gap:7px;margin-top:auto;padding-top:8px;flex-wrap:wrap;justify-content:center}
+.hexc{width:20px;height:20px;border-radius:6px;border:1px solid rgba(255,255,255,.18);flex:none}
+.hexval{font-family:Consolas,monospace;font-size:.82rem;color:#cdd4e4}
+.badge{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#ffd66e;border:1px solid rgba(255,214,110,.4);border-radius:999px;padding:2px 7px}
+.status{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.status.mixes{color:#7fc8ff}.status.retired{color:#ff8f8f}.status.ok{color:#8fe3a1}
+footer{border-top:1px solid var(--line);background:var(--panel);padding:30px 20px 44px;color:var(--dim);font-size:.85rem}
+footer .inner{max-width:900px;margin:0 auto}
+footer h3{color:var(--text);margin-bottom:10px;font-size:1rem}
+footer ul{margin:8px 0 0 18px}
+footer li{margin:4px 0}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#fff;padding:10px 22px;border-radius:999px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:9}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.empty{text-align:center;color:var(--dim);padding:40px;grid-column:1/-1}
+@media(max-width:520px){.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Perler Bead Colors<span class="dot"></span>The Complete Chart</h1>
+  <p class="sub">Every numbered Perler fuse bead &mdash; solids, pearls, neons, glitters, glow-in-the-dark and stripes &mdash; with Perler code, SKU (1,000-bead bag number) and hex value. Click any card to copy its hex.</p>
+  <div class="count"><b id="n">0</b> colors listed</div>
+</header>
+
+<div class="controls"><input id="search" type="search" placeholder="Search name, P-code, SKU or hex&hellip;"></div>
+<div class="chips" id="chips"></div>
+<div class="grid" id="grid"></div>
+
+<footer><div class="inner">
+  <h3>Notes &amp; sources</h3>
+  <ul>
+    <li>SKUs are the official 1,000-bead bag numbers (80-XXXXX) sold by Perler; colors marked <b>mix only</b> are not sold as single-color bags.</li>
+    <li>P-numbers follow the community-standard numbering of Perler's printed color chart. For the 2021 additions the P-number order does not match SKU order (verified against perler.com product listings).</li>
+    <li>Colors marked <b>new</b> have not yet been assigned chart numbers: the 2022&ndash;2024 additions (Celery, Sunflower, Lemon, Neon Blue, Coral, Brick, Rich Butter, Peacock, Carnation Pink) and the 2026 U.S. releases from the Vivid Luxe, Secret Garden and Not So Basics collections (Toffee&ndash;Lipstick).</li>
+    <li>Hex values for the 2026 colors were sampled from Perler's official product swatch photos (PER17646&ndash;PER17668).</li>
+    <li>Solid-color hex values are screen approximations from photographed beads (Perlervault / beadcolors dataset). Values marked <b>approx</b> are estimates for specialty finishes (pearl, neon, glow, glitter, metallic) which shift under light.</li>
+    <li>Striped beads contain multiple colors and have no single hex; swatches are representative.</li>
+    <li>Data compiled from perler.com, github.com/maxcleme/beadcolors, pixel-pattern.com, pixel-beads.com and fusebeadideas.com.</li>
+  </ul>
+</div></footer>
+<div class="toast" id="toast">Copied!</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
