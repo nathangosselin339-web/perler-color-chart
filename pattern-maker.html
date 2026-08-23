@@ -67,6 +67,7 @@ button.mini:hover{border-color:#46506a;background:#20242f}
 .sline i{width:11px;height:11px;border-radius:50%;flex:none;display:inline-block}
 .sline em{font-style:normal;margin-left:auto;color:var(--text)}
 #allOwned{display:none;color:var(--ok);font-size:.85rem;font-weight:600;margin-top:12px}
+.dtag{font-style:normal;font-size:.6rem;color:#ff8484;border:1px solid #5a3438;background:rgba(255,93,93,.08);padding:0 4px;border-radius:4px;margin-left:4px;vertical-align:1px;font-family:"Segoe UI",system-ui,sans-serif}
 .empty{color:var(--dim);text-align:center;padding:30px 10px;font-size:.9rem}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#fff;padding:9px 20px;border-radius:999px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:9}
 .toast.show{opacity:1;transform:translateX(-50%)}
@@ -288,6 +289,7 @@ function rgbLab(r,g,b){
   return[116*y-16,500*(x-y),200*(y-z)];
 }
 const PAL=PALETTE.map(([code,name,sku,hex,type])=>({code,name,sku,hex,type,rgb:hexRgb(hex),lab:rgbLab(...hexRgb(hex))}));
+const DISC=new Set(["Periwinkle Blue","Spice","Mocha","Slime","Celery","Sunflower","Lemon","Neon Blue","Clear Glitter","Kiwi Glitter","Pink Glitter","White Glitter"]);
 const activePal=()=>PAL.filter(p=>enabled.has(p.type));
 
 function nearest(r,g,b,pal){
@@ -410,7 +412,7 @@ function renderList(){
     const d=document.createElement("div");
     d.className="item"+(have?" have":"");
     d.innerHTML=`<span class="sw" style="background:${p.hex}"></span>
-      <span class="nm"><b>${p.name}</b><span>${p.code||"&mdash;"} &middot; ${p.sku}</span></span>
+      <span class="nm"><b>${p.name}${DISC.has(p.name)?' <i class="dtag">discontinued</i>':""}</b><span>${p.code||"&mdash;"} &middot; ${p.sku}</span></span>
       <span class="cnt">${n}</span>
       <input type="checkbox" ${have?"checked":""} title="I have this color">`;
     d.querySelector("input").onchange=()=>{
@@ -437,13 +439,13 @@ function renderShop(sorted){
   document.getElementById("shopN").textContent=need.length;
   document.getElementById("shopB").textContent=need.reduce((a,[,n])=>a+n,0).toLocaleString();
   document.getElementById("shopList").innerHTML=need.map(([p,n])=>
-    `<div class="sline"><i style="background:${p.hex}"></i>${p.name}${p.code?" "+p.code:""}<em>&times;${n.toLocaleString()}</em></div>`).join("");
+    `<div class="sline"><i style="background:${p.hex}"></i>${p.name}${p.code?" "+p.code:""}${DISC.has(p.name)?' <i class="dtag">discontinued</i>':""}<em>&times;${n.toLocaleString()}</em></div>`).join("");
 }
 
 document.getElementById("copyShop").onclick=()=>{
   if(!lastNeeded.length)return;
   const lines=["Perler shopping list",""];
-  for(const[p,n]of lastNeeded)lines.push(`- ${p.name}${p.code?" "+p.code:""} (${p.sku}) x${n}`);
+  for(const[p,n]of lastNeeded)lines.push(`- ${p.name}${p.code?" "+p.code:""} (${p.sku})${DISC.has(p.name)?" [DISCONTINUED]":""} x${n}`);
   lines.push("",`Total: ${lastNeeded.reduce((a,[,n])=>a+n,0).toLocaleString()} beads`);
   const text=lines.join("\n"),done=()=>toast("Shopping list copied");
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
