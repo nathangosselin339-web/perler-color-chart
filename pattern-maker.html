@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perler Pattern Maker</title>
+<meta name="description" content="Turn any image into a Perler fuse bead pattern using the real Perler color palette. Track which colors you own.">
+<style>
+:root{
+  --bg:#101218; --panel:#171a22; --card:#1c202b; --line:#2a2f3d;
+  --text:#e8eaf0; --dim:#9aa3b5; --accent:#ff5d8f; --ok:#8fe3a1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.45}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+header h1{font-size:1.15rem;letter-spacing:.4px;display:flex;align-items:center;gap:10px}
+.dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd66e,#e8912d);box-shadow:0 0 0 3px rgba(232,145,45,.25)}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;max-width:1400px;margin:16px auto;padding:0 16px;align-items:start}
+@media(max-width:960px){.wrap{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:12px}
+.controls label{font-size:.85rem;color:var(--dim);display:flex;align-items:center;gap:8px}
+input[type=range]{accent-color:var(--accent)}
+.chip{cursor:pointer;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--dim);font-size:.78rem;user-select:none;transition:.15s}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.chip:hover{color:var(--text)}
+.chip.on:hover{color:#fff}
+button.act{cursor:pointer;padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:.88rem;font-weight:600;transition:.15s}
+button.act:hover{border-color:#46506a;background:#20242f}
+button.act.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+#drop{border:2px dashed #39415a;border-radius:14px;padding:54px 20px;text-align:center;color:var(--dim);cursor:pointer;transition:.15s;font-size:1rem}
+#drop.over{border-color:var(--accent);background:rgba(255,93,143,.06);color:var(--text)}
+#drop b{color:var(--text)}
+.canvaswrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:
+  repeating-conic-gradient(#141720 0% 25%, #191d27 0% 50%) 0 0/22px 22px;margin-top:12px}
+canvas{display:block;image-rendering:pixelated}
+.side .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.stat{flex:1 1 90px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;text-align:center}
+.stat b{display:block;font-size:1.05rem;color:var(--accent)}
+.stat span{font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.bar{height:8px;border-radius:999px;background:var(--panel);border:1px solid var(--line);overflow:hidden;margin:10px 0}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5ee38a,var(--ok));transition:width .25s}
+.rowline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.rowline .t{font-size:.82rem;color:var(--dim)}
+.list{max-height:62vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px}
+.item{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 9px;transition:.15s}
+.item.have{opacity:.45}
+.item.have .nm{text-decoration:line-through}
+.sw{width:26px;height:26px;border-radius:50%;flex:none;box-shadow:inset -3px -4px 6px rgba(0,0,0,.35),inset 2px 3px 5px rgba(255,255,255,.28),0 1px 3px rgba(0,0,0,.5)}
+.nm{flex:1;min-width:0}
+.nm b{display:block;font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm span{font-size:.68rem;color:var(--dim);font-family:Consolas,monospace}
+.cnt{font-size:.78rem;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-family:Consolas,monospace}
+input[type=checkbox]{width:17px;height:17px;accent-color:#5ee38a;cursor:pointer;flex:none}
+.empty{color:var(--dim);text-align:center;padding:30px 10px;font-size:.9rem}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#fff;padding:9px 20px;border-radius:999px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:9}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.hidden{display:none!important}
+footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);font-size:.78rem;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="dot"></span>Perler Pattern Maker</h1>
+  <nav><a href="./">Color Chart</a></nav>
+</header>
+
+<div class="wrap">
+  <div class="panel left">
+    <div id="drop"><b>Click, drop or paste an image</b><br>It becomes a bead pattern below</div>
+
+    <div id="work" class="hidden">
+      <div class="controls">
+        <label>Board width <input id="wRange" type="range" min="10" max="120" value="29"> <b id="wVal" style="min-width:3ch">29</b></label>
+        <label>Zoom <input id="zRange" type="range" min="4" max="36" value="14"></label>
+        <button class="act pri" id="savePng">Save PNG</button>
+      </div>
+      <div class="controls" id="typeChips"></div>
+      <div class="canvaswrap"><canvas id="cv"></canvas></div>
+    </div>
+  </div>
+
+  <aside class="side panel">
+    <div class="rowline">
+      <span class="t" id="palInfo">palette</span>
+      <label class="t" style="cursor:pointer"><input type="checkbox" id="hideOwned"> hide owned</label>
+    </div>
+    <div class="bar"><i id="ownBar"></i></div>
+    <div class="stats">
+      <div class="stat"><b id="stUnique">0</b><span>colors used</span></div>
+      <div class="stat"><b id="stBeads">0</b><span>total beads</span></div>
+      <div class="stat"><b id="stOwned">0/0</b><span>owned</span></div>
+    </div>
+    <div class="list" id="list"><div class="empty">Load an image to see which colors you need.</div></div>
+    <div style="margin-top:10px"><button class="act" id="clearOwn">Reset ownership checklist</button></div>
+  </aside>
+</div>
+
+<footer>Colors matched in perceptual lightness space to the official Perler palette &middot; your checkmarks are saved in this browser only.</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const PALETTE=[
+["P01","White","80-19001","#EAEFEE","solid"],
+["P02","Creme","80-19002","#E1E2BB","solid"],
+["P03","Yellow","80-19003","#E7CE3E","solid"],
+["P04","Orange","80-19004","#EB7B31","solid"],
+["P05","Red","80-19005","#B0353C","solid"],
+["P06","Bubblegum","80-19006","#D8729A","solid"],
+["P07","Purple","80-19007","#684B86","solid"],
+["P08","Dark Blue","80-19008","#0E5092","solid"],
+["P09","Light Blue","80-19009","#278CC9","solid"],
+["P10","Dark Green","80-19010","#007B4E","solid"],
+["P11","Light Green","80-19011","#18C7B1","solid"],
+["P12","Brown","80-19012","#674C44","solid"],
+["P17","Grey","80-19017","#909497","solid"],
+["P18","Black","80-19018","#323234","solid"],
+["P19","Clear","80-19019","#DCE4EA","clear"],
+["P20","Rust","80-19020","#995043","solid"],
+["P21","Light Brown","80-19021","#936848","solid"],
+["P33","Peach","80-19033","#E9BFB9","solid"],
+["P35","Tan","80-19035","#C5AC90","solid"],
+["P38","Magenta","80-19038","#E04284","solid"],
+["P47","Neon Yellow","mix","#DCE002","neon"],
+["P48","Neon Orange","mix","#FF7700","neon"],
+["P49","Neon Green","mix","#019E43","neon"],
+["P50","Neon Pink","mix","#FF3991","neon"],
+["P52","Pastel Blue","80-19052","#4A9CCF","solid"],
+["P53","Pastel Green","80-19053","#6DCC94","solid"],
+["P54","Pastel Lavender","80-19054","#937FBF","solid"],
+["P56","Pastel Yellow","80-19056","#E9E290","solid"],
+["P57","Cheddar","80-19057","#FBB146","solid"],
+["P58","Toothpaste","80-19058","#96D1D4","solid"],
+["P59","Hot Coral","80-19059","#DD595B","solid"],
+["P60","Plum","80-19060","#A75D9D","solid"],
+["P61","Kiwi Lime","80-19061","#69B845","solid"],
+["P62","Turquoise","80-19062","#0098C5","solid"],
+["P63","Blush","80-19063","#F99297","solid"],
+["P70","Periwinkle Blue","80-19070","#6683B7","solid"],
+["P72","Glow in the Dark Blue","mix","#9FB8B4","glow"],
+["P74","Glow in the Dark Orange","mix","#D8B27E","glow"],
+["P75","Glow in the Dark Green","80-19075","#BEC696","glow"],
+["P79","Light Pink","80-19079","#E1BCCE","solid"],
+["P80","Bright Green","80-19080","#4DAB64","solid"],
+["P83","Pink","80-19083","#D45496","solid"],
+["P85","Gold Metallic","mix","#BB7634","metallic"],
+["P86","Glow in the Dark Purple","mix","#B2A0C6","glow"],
+["P88","Raspberry","80-19088","#983864","solid"],
+["P90","Butterscotch","80-19090","#DA9964","solid"],
+["P91","Parrot Green","80-19091","#009188","solid"],
+["P92","Dark Grey","80-19092","#585C61","solid"],
+["P93","Blueberry Cream","80-19093","#85A8E3","solid"],
+["P96","Cranapple","80-19096","#843947","solid"],
+["P97","Prickly Pear","80-19097","#BBC938","solid"],
+["P98","Sand","80-19098","#E5BE9E","solid"],
+["P100","Pearl Coral","mix","#F97E79","pearl"],
+["P101","Pearl Light Blue","mix","#7AAEA2","pearl"],
+["P102","Pearl Green","mix","#84B791","pearl"],
+["P103","Pearl Yellow","mix","#CAC033","pearl"],
+["P104","Pearl Light Pink","mix","#D7A8A2","pearl"],
+["P105","Pearl Silver","80-15105","#777B81","pearl"],
+["P179","Evergreen","80-15179","#305545","solid"],
+["P181","Light Grey","80-15181","#B3BAB8","solid"],
+["P182","Lavender","80-15182","#AF9FCE","solid"],
+["P184","Clear Blue","80-15184","#8FC1DE","clear"],
+["P185","Copper Metallic","mix","#B4703A","metallic"],
+["P187","Clear Glitter","80-15187","#E9EBDF","glitter"],
+["P188","Kiwi Glitter","80-15188","#9CCB70","glitter"],
+["P189","Yellow Glitter","mix","#E8D44D","glitter"],
+["P191","Pink Glitter","80-15191","#EE9FC4","glitter"],
+["P192","White Glitter","80-15192","#F2F2EC","glitter"],
+["P199","Shamrock","80-15199","#008F53","solid"],
+["P200","Cobalt","80-15200","#0065B1","solid"],
+["P201","Midnight","80-15201","#2F3C55","solid"],
+["P202","Robin's Egg","80-15202","#A9CDD5","solid"],
+["P203","Flamingo","80-15203","#F2AFB7","solid"],
+["P204","Salmon","80-15204","#E1747A","solid"],
+["P205","Fawn","80-15205","#C9A385","solid"],
+["P206","Pewter","80-15206","#94A19D","solid"],
+["P207","Charcoal","80-15207","#4F595A","solid"],
+["P208","Toasted Marshmallow","80-15208","#DEDACE","solid"],
+["P210","Orchid","80-15210","#B1628E","solid"],
+["P211","Tomato","80-15211","#D14337","solid"],
+["P212","Spice","80-15212","#D9593A","solid"],
+["P213","Apricot","80-15213","#F5A168","solid"],
+["P214","Sherbet","80-15214","#D8E47C","solid"],
+["P215","Mist","80-15215","#93B0BD","solid"],
+["P216","Sky","80-15216","#4AC0D8","solid"],
+["P217","Lagoon","80-15217","#00A4AC","solid"],
+["P218","Teal","80-15218","#047F8A","solid"],
+["P219","Fern","80-15219","#7F971A","solid"],
+["P220","Olive","80-15220","#696E31","solid"],
+["P239","Mocha","80-15239","#C8B693","solid"],
+["P240","Mint","80-15240","#B3EED5","solid"],
+["P241","Sour Apple","80-15241","#A3DE6F","solid"],
+["P242","Cotton Candy","80-15242","#F479B0","solid"],
+["P243","Grape","80-15243","#503B9C","solid"],
+["P244","Rose","80-15244","#D25D72","solid"],
+["P245","Iris","80-15245","#4E56A3","solid"],
+["P246","Tangerine","80-15246","#FD5918","solid"],
+["P247","Forest","80-15247","#005D57","solid"],
+["P248","Eggplant","80-15248","#6F3255","solid"],
+["P249","Honey","80-15249","#DA8C2C","solid"],
+["P250","Gingerbread","80-15250","#7E5446","solid"],
+["P251","Thistle","80-15251","#8C8CA7","solid"],
+["P252","Denim","80-15253","#4C6388","solid"],
+["P253","Sage","80-15254","#9AA98E","solid"],
+["P254","Orange Cream","80-15255","#EFB79B","solid"],
+["P255","Fruit Punch","80-15256","#CA3B65","solid"],
+["P256","Fuchsia","80-15257","#CB59B9","solid"],
+["P257","Mulberry","80-15258","#714875","solid"],
+["P258","Slime","80-15259","#C8C85C","solid"],
+["P259","Stone","80-15260","#988C8C","solid"],
+["P260","Dark Spruce","80-15261","#14313B","solid"],
+["P261","Cocoa","80-15262","#392928","solid"],
+["P262","Slate Blue","80-15252","#5E6D7B","solid"],
+["P265","Twilight Plum","80-15265","#C685B1","solid"],
+["P266","Caribbean Sea","80-15266","#6CC8AD","solid"],
+["P267","Frosted Lilac","80-15267","#CDB7C3","solid"],
+["Celery","","80-15263","#BED4A6","solid"],
+["Sunflower","","80-15268","#DEBA0B","solid"],
+["Lemon","","80-15269","#F6D901","solid"],
+["Neon Blue","","80-15089","#406AE1","neon"],
+["Coral","","80-15272","#FF9A8B","solid"],
+["Brick","","80-15273","#FC9574","solid"],
+["Rich Butter","","80-15274","#F6CA69","solid"],
+["Peacock","","80-15275","#0090AC","solid"],
+["Carnation Pink","","80-15276","#F8C7C9","solid"],
+["Cherry","","80-15961","#9D2B3A","solid"],
+["Toffee","","PER17646","#8E5529","solid"],
+["Amber","","PER17647","#C6582C","solid"],
+["Jade","","PER17648","#03C17D","solid"],
+["Shark","","PER17649","#6F8675","solid"],
+["Capri Blue","","PER17650","#0DCBDD","solid"],
+["Seafoam","","PER17651","#A2C3BF","solid"],
+["Violet Frost","","PER17652","#C8C9DA","solid"],
+["Indigo","","PER17653","#3F4666","solid"],
+["Oyster","","PER17654","#D9C78F","solid"],
+["Khaki","","PER17655","#AB975E","solid"],
+["Seaweed","","PER17656","#947238","solid"],
+["Steel","","PER17657","#494F51","solid"],
+["Champagne","","PER17658","#E1BA84","solid"],
+["Wheat","","PER17659","#E2B57E","solid"],
+["Colonial Blue","","PER17660","#5FACC5","solid"],
+["Faded Rose","","PER17661","#A75F7D","solid"],
+["Teaberry","","PER17662","#C4799B","solid"],
+["Persimmon","","PER17663","#DB7F6F","solid"],
+["Violet","","PER17664","#984BBD","solid"],
+["Deep Purple","","PER17665","#502C5B","solid"],
+["Beige","","PER17666","#AE724F","solid"],
+["Iron","","PER17667","#3E3832","solid"],
+["Lipstick","","PER17668","#F33439","solid"]
+];
+
+const TYPES=["solid","pearl","neon","glow","glitter","metallic","clear"];
+const enabled=new Set(["solid"]);
+let img=null,cellW=29,cellH=0,map=null,zoomPx=14;
+let owned=new Set((()=>{try{return JSON.parse(localStorage.getItem("pm-owned-v1")||"[]")}catch(e){return[]}})());
+
+function hexRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function rgbLab(r,g,b){
+  const f=v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+  r=f(r);g=f(g);b=f(b);
+  let x=(r*.4124+g*.3576+b*.1805)/.95047,y=r*.2126+g*.7152+b*.0722,z=(r*.0193+g*.1192+b*.9505)/1.08883;
+  const k=v=>v>.008856?Math.cbrt(v):7.787*v+16/116;
+  x=k(x);y=k(y);z=k(z);
+  return[116*y-16,500*(x-y),200*(y-z)];
+}
+const PAL=PALETTE.map(([code,name,sku,hex,type])=>({code,name,sku,hex,type,rgb:hexRgb(hex),lab:rgbLab(...hexRgb(hex))}));
+const activePal=()=>PAL.filter(p=>enabled.has(p.type));
+
+function nearest(r,g,b,pal){
+  const l=rgbLab(r,g,b);
+  let bi=0,bd=Infinity;
+  for(let i=0;i<pal.length;i++){
+    const p=pal[i].lab,d=(p[0]-l[0])**2+(p[1]-l[1])**2+(p[2]-l[2])**2;
+    if(d<bd){bd=d;bi=i}
+  }
+  return pal[bi];
+}
+
+const drop=document.getElementById("drop"),work=document.getElementById("work"),
+cv=document.getElementById("cv"),ctx=cv.getContext("2d"),
+listEl=document.getElementById("list"),toastEl=document.getElementById("toast");
+
+function toast(m){toastEl.textContent=m;toastEl.classList.add("show");setTimeout(()=>toastEl.classList.remove("show"),1400)}
+
+TYPES.forEach(t=>{
+  const b=document.createElement("button");
+  b.className="chip"+(t==="solid"?" on":"");
+  b.textContent=t;
+  b.onclick=()=>{
+    if(enabled.has(t)&&enabled.size===1)return;
+    enabled.has(t)?enabled.delete(t):enabled.add(t);
+    b.classList.toggle("on",enabled.has(t));
+    if(img)process();
+  };
+  document.getElementById("typeChips").appendChild(b);
+});
+document.getElementById("palInfo").textContent=`${PAL.length} colors available`;
+
+document.getElementById("wRange").oninput=e=>{cellW=+e.target.value;document.getElementById("wVal").textContent=cellW;if(img)process()};
+document.getElementById("zRange").oninput=e=>{zoomPx=+e.target.value;if(map)render()};
+document.getElementById("hideOwned").onchange=renderList;
+
+drop.onclick=()=>{const i=document.createElement("input");i.type="file";i.accept="image/*";i.onchange=()=>i.files[0]&&load(i.files[0]);i.click()};
+drop.ondragover=e=>{e.preventDefault();drop.classList.add("over")};
+drop.ondragleave=()=>drop.classList.remove("over");
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove("over");e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
+addEventListener("paste",e=>{for(const it of e.clipboardData.items)if(it.type.startsWith("image/"))load(it.getAsFile())});
+
+function load(file){
+  const url=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{img=im;URL.revokeObjectURL(url);work.classList.remove("hidden");process()};
+  im.src=url;
+}
+
+function process(){
+  const aspect=img.height/img.width;
+  cellH=Math.max(1,Math.round(cellW*aspect));
+  const off=document.createElement("canvas");
+  const sc=Math.min(1,Math.sqrt(cellW*cellH/(img.width*img.height))*4);
+  off.width=Math.max(cellW,Math.round(img.width*Math.min(1,sc)));
+  off.height=Math.max(cellH,Math.round(img.height*Math.min(1,sc)));
+  const octx=off.getContext("2d",{willReadFrequently:true});
+  octx.imageSmoothingEnabled=true;octx.imageSmoothingQuality="high";
+  octx.drawImage(img,0,0,off.width,off.height);
+  const sx=off.width/cellW,sy=off.height/cellH,data=octx.getImageData(0,0,off.width,off.height).data;
+  const pal=activePal(),m=[];
+  for(let y=0;y<cellH;y++){
+    const row=[];
+    for(let x=0;x<cellW;x++){
+      const x0=Math.floor(x*sx),y0=Math.floor(y*sy),x1=Math.min(off.width,Math.floor((x+1)*sx)),y1=Math.min(off.height,Math.floor((y+1)*sy));
+      let r=0,g=0,b=0,a=0,n=0;
+      for(let yy=y0;yy<y1;yy++)for(let xx=x0;xx<x1;xx++){const o=(yy*off.width+xx)*4;r+=data[o];g+=data[o+1];b+=data[o+2];a+=data[o+3];n++}
+      row.push(a/n<110?-1:nearest(r/n,g/n,b/n,pal));
+    }
+    m.push(row);
+  }
+  map=m;
+  render();
+  renderList();
+}
+
+const tiles={};
+function tileFor(color){
+  if(tiles[color.hex])return tiles[color.hex];
+  const t=document.createElement("canvas"),z=Math.max(zoomPx,36);
+  t.width=z;t.height=z;const c=t.getContext("2d"),r=z*.22;
+  c.fillStyle=color.hex;
+  c.beginPath();c.roundRect(.5,.5,z-1,z-1,r);c.fill();
+  const g=c.createRadialGradient(z*.32,z*.28,1,z*.32,z*.28,z*.55);
+  g.addColorStop(0,"rgba(255,255,255,.34)");g.addColorStop(1,"rgba(255,255,255,0)");
+  c.fillStyle=g;c.beginPath();c.roundRect(.5,.5,z-1,z-1,r);c.fill();
+  tiles[color.hex]=t;return t;
+}
+
+function render(){
+  cv.width=cellW*zoomPx;cv.height=cellH*zoomPx;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle="#101218";ctx.fillRect(0,0,cv.width,cv.height);
+  for(let y=0;y<cellH;y++)for(let x=0;x<cellW;x++){
+    const p=map[y][x];
+    if(p===-1)continue;
+    ctx.drawImage(tileFor(p),x*zoomPx,y*zoomPx,zoomPx,zoomPx);
+  }
+}
+
+function renderList(){
+  if(!map){return}
+  const counts=new Map();
+  for(const row of map)for(const p of row)if(p!==-1)counts.set(p,(counts.get(p)||0)+1);
+  const sorted=[...counts.entries()].sort((a,b)=>b[1]-a[1]);
+  const hideOwned=document.getElementById("hideOwned").checked;
+  listEl.innerHTML="";
+  if(!sorted.length){listEl.innerHTML='<div class="empty">No opaque pixels matched.</div>'}
+  for(const[p,n]of sorted){
+    const have=owned.has(p.name);
+    if(hideOwned&&have)continue;
+    const d=document.createElement("div");
+    d.className="item"+(have?" have":"");
+    d.innerHTML=`<span class="sw" style="background:${p.hex}"></span>
+      <span class="nm"><b>${p.name}</b><span>${p.code||"&mdash;"} &middot; ${p.sku}</span></span>
+      <span class="cnt">${n}</span>
+      <input type="checkbox" ${have?"checked":""} title="I have this color">`;
+    d.querySelector("input").onchange=e=>{
+      e.target.checked?owned.add(p.name):owned.delete(p.name);
+      localStorage.setItem("pm-owned-v1",JSON.stringify([...owned]));
+      d.classList.toggle("have",e.target.checked);
+      updateStats(counts);
+      if(document.getElementById("hideOwned").checked)renderList();
+    };
+    listEl.appendChild(d);
+  }
+  updateStats(counts);
+}
+
+function updateStats(counts){
+  const names=[...(counts?.keys?.()||[])].map(p=>p.name);
+  const uniq=counts?counts.size:0;
+  const beads=counts?[...counts.values()].reduce((a,b)=>a+b,0):0;
+  document.getElementById("stUnique").textContent=uniq;
+  document.getElementById("stBeads").textContent=beads.toLocaleString();
+  document.getElementById("stOwned").textContent=names.filter(n=>owned.has(n)).length+"/"+uniq;
+  document.getElementById("ownBar").style.width=uniq?(names.filter(n=>owned.has(n)).length/uniq*100)+"%":"0";
+}
+
+document.getElementById("clearOwn").onclick=()=>{
+  owned.clear();localStorage.removeItem("pm-owned-v1");
+  renderList();toast("Ownership checklist cleared");
+};
+
+document.getElementById("savePng").onclick=()=>{
+  const z=24,out=document.createElement("canvas");
+  out.width=cellW*z;out.height=cellH*z;
+  const c=out.getContext("2d");
+  c.fillStyle="#fff";c.fillRect(0,0,out.width,out.height);
+  for(let y=0;y<cellH;y++)for(let x=0;x<cellW;x++){
+    const p=map[y][x];
+    if(p===-1)continue;
+    c.fillStyle=p.hex;c.fillRect(x*z,y*z,z,z);
+  }
+  const a=document.createElement("a");
+  a.download=`perler-pattern-${cellW}x${cellH}.png`;
+  a.href=out.toDataURL("image/png");a.click();
+};
+
+if(location.search.includes("selftest")){
+  const c=document.createElement("canvas");c.width=64;c.height=64;
+  const g=c.getContext("2d");
+  const grd=g.createLinearGradient(0,0,64,64);
+  grd.addColorStop(0,"#ff0000");grd.addColorStop(.5,"#00ff00");grd.addColorStop(1,"#0000ff");
+  g.fillStyle=grd;g.fillRect(0,0,64,64);
+  fetch(c.toDataURL()).then(f=>f.blob()).then(b=>load(new File([b],"test.png",{type:"image/png"})));
+}
+</script>
+</body>
+</html>
