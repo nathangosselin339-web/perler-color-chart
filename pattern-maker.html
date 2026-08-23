@@ -54,6 +54,19 @@ canvas{display:block;image-rendering:pixelated}
 .nm span{font-size:.68rem;color:var(--dim);font-family:Consolas,monospace}
 .cnt{font-size:.78rem;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-family:Consolas,monospace}
 input[type=checkbox]{width:17px;height:17px;accent-color:#5ee38a;cursor:pointer;flex:none}
+.presets{display:flex;gap:5px}
+.preset{cursor:pointer;font-size:.72rem;padding:3px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--dim);transition:.15s}
+.preset:hover{color:var(--text);border-color:#46506a}
+button.mini{cursor:pointer;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:.75rem;font-weight:600;transition:.15s}
+button.mini:hover{border-color:#46506a;background:#20242f}
+#shop{display:none;margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.shophead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.shophead .t{font-size:.82rem;color:var(--dim)}
+.shophead b{color:var(--accent)}
+.sline{display:flex;align-items:center;gap:7px;font-size:.76rem;color:var(--dim);padding:3px 0;font-family:Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sline i{width:11px;height:11px;border-radius:50%;flex:none;display:inline-block}
+.sline em{font-style:normal;margin-left:auto;color:var(--text)}
+#allOwned{display:none;color:var(--ok);font-size:.85rem;font-weight:600;margin-top:12px}
 .empty{color:var(--dim);text-align:center;padding:30px 10px;font-size:.9rem}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#fff;padding:9px 20px;border-radius:999px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:9}
 .toast.show{opacity:1;transform:translateX(-50%)}
@@ -74,6 +87,7 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
     <div id="work" class="hidden">
       <div class="controls">
         <label>Board width <input id="wRange" type="range" min="10" max="120" value="29"> <b id="wVal" style="min-width:3ch">29</b></label>
+        <span id="presets" class="presets"></span>
         <label>Zoom <input id="zRange" type="range" min="4" max="36" value="14"></label>
         <button class="act pri" id="savePng">Save PNG</button>
       </div>
@@ -94,6 +108,11 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
       <div class="stat"><b id="stOwned">0/0</b><span>owned</span></div>
     </div>
     <div class="list" id="list"><div class="empty">Load an image to see which colors you need.</div></div>
+    <div id="allOwned">&#10003; You own every color in this pattern!</div>
+    <div id="shop">
+      <div class="shophead"><span class="t">Shopping list &mdash; <b id="shopN">0</b> colors, <b id="shopB">0</b> beads</span><button class="mini" id="copyShop">Copy</button></div>
+      <div id="shopList"></div>
+    </div>
     <div style="margin-top:10px"><button class="act" id="clearOwn">Reset ownership checklist</button></div>
   </aside>
 </div>
@@ -301,7 +320,15 @@ TYPES.forEach(t=>{
 });
 document.getElementById("palInfo").textContent=`${PAL.length} colors available`;
 
-document.getElementById("wRange").oninput=e=>{cellW=+e.target.value;document.getElementById("wVal").textContent=cellW;if(img)process()};
+const wRange=document.getElementById("wRange"),wVal=document.getElementById("wVal");
+function setW(n){wRange.value=n;cellW=n;wVal.textContent=n;if(img)process()}
+[[29,"1 square board"],[58,"2 boards wide"],[87,"3 boards wide"],[116,"4 boards wide"]].forEach(([n,title])=>{
+  const b=document.createElement("button");
+  b.className="preset";b.textContent=n;b.title=title;
+  b.onclick=()=>setW(n);
+  document.getElementById("presets").appendChild(b);
+});
+document.getElementById("wRange").oninput=e=>setW(+e.target.value);
 document.getElementById("zRange").oninput=e=>{zoomPx=+e.target.value;if(map)render()};
 document.getElementById("hideOwned").onchange=renderList;
 
@@ -369,32 +396,64 @@ function render(){
 }
 
 function renderList(){
-  if(!map){return}
+  if(!map)return;
+  const st=listEl.scrollTop;
   const counts=new Map();
   for(const row of map)for(const p of row)if(p!==-1)counts.set(p,(counts.get(p)||0)+1);
   const sorted=[...counts.entries()].sort((a,b)=>b[1]-a[1]);
-  const hideOwned=document.getElementById("hideOwned").checked;
+  const hide=document.getElementById("hideOwned").checked;
   listEl.innerHTML="";
-  if(!sorted.length){listEl.innerHTML='<div class="empty">No opaque pixels matched.</div>'}
+  if(!sorted.length)listEl.innerHTML='<div class="empty">No opaque pixels matched.</div>';
   for(const[p,n]of sorted){
     const have=owned.has(p.name);
-    if(hideOwned&&have)continue;
+    if(hide&&have)continue;
     const d=document.createElement("div");
     d.className="item"+(have?" have":"");
     d.innerHTML=`<span class="sw" style="background:${p.hex}"></span>
       <span class="nm"><b>${p.name}</b><span>${p.code||"&mdash;"} &middot; ${p.sku}</span></span>
       <span class="cnt">${n}</span>
       <input type="checkbox" ${have?"checked":""} title="I have this color">`;
-    d.querySelector("input").onchange=e=>{
-      e.target.checked?owned.add(p.name):owned.delete(p.name);
+    d.querySelector("input").onchange=()=>{
+      owned.has(p.name)?owned.delete(p.name):owned.add(p.name);
       localStorage.setItem("pm-owned-v1",JSON.stringify([...owned]));
-      d.classList.toggle("have",e.target.checked);
-      updateStats(counts);
-      if(document.getElementById("hideOwned").checked)renderList();
+      renderList();
     };
     listEl.appendChild(d);
   }
+  listEl.scrollTop=st;
   updateStats(counts);
+  renderShop(sorted);
+}
+
+let lastNeeded=[];
+function renderShop(sorted){
+  const need=sorted.filter(([p])=>!owned.has(p.name));
+  lastNeeded=need;
+  const shop=document.getElementById("shop"),all=document.getElementById("allOwned");
+  const anyColors=sorted.length>0;
+  shop.style.display=anyColors&&need.length?"block":"none";
+  all.style.display=anyColors&&!need.length?"block":"none";
+  if(!anyColors||!need.length)return;
+  document.getElementById("shopN").textContent=need.length;
+  document.getElementById("shopB").textContent=need.reduce((a,[,n])=>a+n,0).toLocaleString();
+  document.getElementById("shopList").innerHTML=need.map(([p,n])=>
+    `<div class="sline"><i style="background:${p.hex}"></i>${p.name}${p.code?" "+p.code:""}<em>&times;${n.toLocaleString()}</em></div>`).join("");
+}
+
+document.getElementById("copyShop").onclick=()=>{
+  if(!lastNeeded.length)return;
+  const lines=["Perler shopping list",""];
+  for(const[p,n]of lastNeeded)lines.push(`- ${p.name}${p.code?" "+p.code:""} (${p.sku}) x${n}`);
+  lines.push("",`Total: ${lastNeeded.reduce((a,[,n])=>a+n,0).toLocaleString()} beads`);
+  const text=lines.join("\n"),done=()=>toast("Shopping list copied");
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
+  else fallbackCopy(text,done);
+};
+function fallbackCopy(text,done){
+  const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand("copy");done()}catch(e){}
+  ta.remove();
 }
 
 function updateStats(counts){
