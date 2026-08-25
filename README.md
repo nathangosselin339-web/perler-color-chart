@@ -32,7 +32,7 @@ Turn any image into a fuse-bead pattern using the real Perler palette.
 
 ## Notes
 
-- Palette data was compiled from Perler's own product listings; hex values were sampled from the official swatch images on perler.com
+- Hex values for the classic color range are aligned with the community-maintained [beadcolors](https://github.com/maxcleme/beadcolors) dataset (Perlervault measurements); newer and specialty-only colors (2026 releases, glitters, clears, mixes) were sampled from Perler's own product imagery
 - Striped/multi-color mixes are excluded since they have no single representative color
 - Your ownership checkmarks are stored only in your browser's local storage (per device/browser) — there is no server and nothing is collected
 - The site is plain static HTML/CSS/JS hosted free via GitHub Pages
