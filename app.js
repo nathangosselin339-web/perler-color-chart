@@ -34,6 +34,7 @@ function beadStyle(c){
 }
 
 function statusOf(c){
+  if(c[8]==="New") return ["Available","ok"];
   if(c[8]) return [c[8],"retired"];
   if(c[2]==="mix") return ["Mix only","mixes"];
   if(c[2]==="retired") return ["Retired","retired"];
@@ -65,7 +66,7 @@ function render(){
       : sku==="retired" ? "No single bag"
       : `SKU ${sku}${sku6k?` <small>6,000 bag: ${sku6k}</small>`:""}`;
     card.innerHTML = `
-      ${code?`<span class="pcode">${code}</span>`:`<span class="newtag">new</span>`}
+      ${code?`<span class="pcode">${code}</span>`:(c[8]==="New"?`<span class="newtag">new</span>`:"")}
       <span class="type-tag">${tagText}</span>
       <div class="${beadCls}" style="${styleAttr}"></div>
       <div class="name">${name}</div>
