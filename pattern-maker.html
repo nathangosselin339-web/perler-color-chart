@@ -68,6 +68,10 @@ button.mini:hover{border-color:#46506a;background:#20242f}
 .sline em{font-style:normal;margin-left:auto;color:var(--text)}
 #allOwned{display:none;color:var(--ok);font-size:.85rem;font-weight:600;margin-top:12px}
 .dtag{font-style:normal;font-size:.6rem;color:#ff8484;border:1px solid #5a3438;background:rgba(255,93,93,.08);padding:0 4px;border-radius:4px;margin-left:4px;vertical-align:1px;font-family:"Segoe UI",system-ui,sans-serif}
+.smode{align-items:center;gap:10px;flex-wrap:wrap}
+.smode-help{font-size:.72rem;color:var(--dim);max-width:520px}
+.chip.pick{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.chip.pick:hover{color:#fff}
 .empty{color:var(--dim);text-align:center;padding:30px 10px;font-size:.9rem}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#fff;padding:9px 20px;border-radius:999px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:9}
 .toast.show{opacity:1;transform:translateX(-50%)}
@@ -87,10 +91,16 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
 
     <div id="work" class="hidden">
       <div class="controls">
-        <label>Board width <input id="wRange" type="range" min="10" max="120" value="29"> <b id="wVal" style="min-width:3ch">29</b></label>
+        <label>Board width <input id="wRange" type="range" min="10" max="128" value="29"> <b id="wVal" style="min-width:3ch">29</b></label>
         <span id="presets" class="presets"></span>
+        <span id="spritePresets" class="presets hidden"></span>
         <label>Zoom <input id="zRange" type="range" min="4" max="36" value="14"></label>
         <button class="act pri" id="savePng">Save PNG</button>
+      </div>
+      <div class="controls smode">
+        <button class="chip" id="spriteOff">Photo mode</button>
+        <button class="chip on" id="spriteOn">Sprite mode</button>
+        <span class="smode-help">Sprites &amp; pixel art: keeps crisp edges, maps each pixel to its closest bead, keeps transparency clear.</span>
       </div>
       <div class="controls" id="typeChips"></div>
       <div class="canvaswrap"><canvas id="cv"></canvas></div>
@@ -323,16 +333,38 @@ TYPES.forEach(t=>{
 document.getElementById("palInfo").textContent=`${PAL.length} colors available`;
 
 const wRange=document.getElementById("wRange"),wVal=document.getElementById("wVal");
+const presetsEl=document.getElementById("presets"),spritePresetsEl=document.getElementById("spritePresets");
+let spriteMode=true;
 function setW(n){wRange.value=n;cellW=n;wVal.textContent=n;if(img)process()}
-[[29,"1 square board"],[58,"2 boards wide"],[87,"3 boards wide"],[116,"4 boards wide"]].forEach(([n,title])=>{
+function setSquare(n){wRange.value=n;cellW=n;cellH=n;wVal.textContent=n;if(img)process()}
+[[29,"29 wide (1 board)"],[58,"58 wide"],[87,"87 wide"],[116,"116 wide"]].forEach(([n,title])=>{
   const b=document.createElement("button");
   b.className="preset";b.textContent=n;b.title=title;
   b.onclick=()=>setW(n);
-  document.getElementById("presets").appendChild(b);
+  presetsEl.appendChild(b);
+});
+[[16,"16 x 16"],[24,"24 x 24"],[29,"29 x 29"],[32,"32 x 32"],[48,"48 x 48"],[64,"64 x 64"],[96,"96 x 96"],[128,"128 x 128"]].forEach(([n,title])=>{
+  const b=document.createElement("button");
+  b.className="preset sprite";b.textContent=n;b.title="Sprite "+title;
+  b.onclick=()=>setSquare(n);
+  spritePresetsEl.appendChild(b);
 });
 document.getElementById("wRange").oninput=e=>setW(+e.target.value);
 document.getElementById("zRange").oninput=e=>{zoomPx=+e.target.value;if(map)render()};
 document.getElementById("hideOwned").onchange=renderList;
+
+const btnOff=document.getElementById("spriteOff"),btnOn=document.getElementById("spriteOn");
+function setMode(sprite){
+  spriteMode=sprite;
+  btnOn.classList.toggle("on",sprite);btnOff.classList.toggle("on",!sprite);
+  presetsEl.classList.toggle("hidden",sprite);
+  spritePresetsEl.classList.toggle("hidden",!sprite);
+  document.querySelectorAll(".preset.sprite").forEach(b=>b.classList.toggle("pick",sprite));
+  if(img)process();
+}
+btnOn.onclick=()=>setMode(true);
+btnOff.onclick=()=>setMode(false);
+setMode(spriteMode);
 
 drop.onclick=()=>{const i=document.createElement("input");i.type="file";i.accept="image/*";i.onchange=()=>i.files[0]&&load(i.files[0]);i.click()};
 drop.ondragover=e=>{e.preventDefault();drop.classList.add("over")};
@@ -342,11 +374,32 @@ addEventListener("paste",e=>{for(const it of e.clipboardData.items)if(it.type.st
 
 function load(file){
   const url=URL.createObjectURL(file),im=new Image();
-  im.onload=()=>{img=im;URL.revokeObjectURL(url);work.classList.remove("hidden");process()};
+  im.onload=()=>{
+    img=im;URL.revokeObjectURL(url);work.classList.remove("hidden");
+    if(spriteMode){
+      const maxSide=Math.max(img.width,img.height);
+      const d=Math.min(128,Math.max(16,maxSide));
+      const s=d/Math.max(1,maxSide);
+      cellW=Math.max(4,Math.round(img.width*s));
+      cellH=Math.max(4,Math.round(img.height*s));
+      wRange.value=cellW;wVal.textContent=cellW;
+    }
+    process();
+  };
   im.src=url;
 }
 
 function process(){
+  if(spriteMode){
+    map=processSprite();
+  }else{
+    map=processPhoto();
+  }
+  render();
+  renderList();
+}
+
+function processPhoto(){
   const aspect=img.height/img.width;
   cellH=Math.max(1,Math.round(cellW*aspect));
   const off=document.createElement("canvas");
@@ -368,9 +421,33 @@ function process(){
     }
     m.push(row);
   }
-  map=m;
-  render();
-  renderList();
+  return m;
+}
+
+function processSprite(){
+  const src=document.createElement("canvas");
+  src.width=img.width;src.height=img.height;
+  const sctx=src.getContext("2d",{willReadFrequently:true});
+  sctx.drawImage(img,0,0);
+  const sd=sctx.getImageData(0,0,src.width,src.height).data;
+  const W=src.width,H=src.height;
+  const targetW=cellW;
+  const sc=targetW/Math.max(1,W);
+  const targetH=Math.max(1,Math.round(H*sc));
+  cellH=targetH;
+  const pal=activePal(),m=[];
+  for(let y=0;y<targetH;y++){
+    const row=[];
+    const sy=Math.min(H-1,Math.floor(y/sc));
+    for(let x=0;x<targetW;x++){
+      const sx=Math.min(W-1,Math.floor(x/sc));
+      const o=(sy*W+sx)*4;
+      if(sd[o+3]<128){row.push(-1);continue}
+      row.push(nearest(sd[o],sd[o+1],sd[o+2],pal));
+    }
+    m.push(row);
+  }
+  return m;
 }
 
 const tiles={};
@@ -495,6 +572,18 @@ if(location.search.includes("selftest")){
   grd.addColorStop(0,"#ff0000");grd.addColorStop(.5,"#00ff00");grd.addColorStop(1,"#0000ff");
   g.fillStyle=grd;g.fillRect(0,0,64,64);
   fetch(c.toDataURL()).then(f=>f.blob()).then(b=>load(new File([b],"test.png",{type:"image/png"})));
+}
+if(location.search.includes("spritetest")){
+  const c=document.createElement("canvas");c.width=4;c.height=4;
+  const g=c.getContext("2d");
+  g.clearRect(0,0,4,4);
+  g.fillStyle="#FF0000";g.fillRect(1,0,2,1);
+  g.fillStyle="#000000";g.fillRect(0,3,4,1);
+  c.toBlob(b=>{
+    const u=URL.createObjectURL(b);const im=new Image();
+    im.onload=()=>{img=im;cellW=4;spriteMode=true;process();document.title="SPRITE:"+map.map(r=>r.map(p=>p===-1?".":p.hex).join("")).join("|")};
+    im.src=u;
+  });
 }
 </script>
 </body>

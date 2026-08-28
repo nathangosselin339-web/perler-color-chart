@@ -21,7 +21,9 @@ A reference of every numbered Perler fuse bead color sold in the US — 170 colo
 Turn any image into a fuse-bead pattern using the real Perler palette.
 
 - Click, drag-and-drop or paste an image (nothing is uploaded — it never leaves your device)
-- Board width slider plus one-click presets for standard 29-peg boards (1–4 wide)
+- **Sprite mode (default)** — great for pixel art and game sprites (Pokémon, etc.): loads at native resolution, keeps crisp edges, maps each pixel to its closest bead, and keeps transparent backgrounds clear
+- **Photo mode** — smooth, averaged matching for ordinary photos and gradients
+- Board width slider plus one-click presets for standard 29-peg boards (1–4 wide), and sprite-size presets (16/24/29/32/48/64/96/128 square)
 - Zoom slider for comfortable viewing
 - Every pixel is matched to the closest real bead color in perceptual (Lab) color space
 - Filter which bead types the matcher may use
