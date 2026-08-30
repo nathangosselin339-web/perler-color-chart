@@ -6,6 +6,8 @@ Free browser tools for Perler fuse beads. No installs, no accounts, no ads, no t
 
 **Pattern Maker:** https://nathangosselin339-web.github.io/perler-color-chart/pattern-maker.html
 
+**Bead Studio:** https://nathangosselin339-web.github.io/perler-color-chart/perler-bead-studio.html
+
 ## Color Chart
 
 A reference of every numbered Perler fuse bead color sold in the US — 170 colors including the 2026 releases.
@@ -21,9 +23,9 @@ A reference of every numbered Perler fuse bead color sold in the US — 170 colo
 Turn any image into a fuse-bead pattern using the real Perler palette.
 
 - Click, drag-and-drop or paste an image (nothing is uploaded — it never leaves your device)
-- **Sprite mode (default)** — great for pixel art and game sprites (Pokémon, etc.): loads at native resolution, keeps crisp edges, maps each pixel to its closest bead, and keeps transparent backgrounds clear
+- **Sprite mode (default)** — great for pixel art and game sprites (Pokémon, etc.): loads each sprite pixel as exactly one bead (true 1:1, no downscaling), keeps crisp edges, maps each pixel to its closest bead, and keeps transparent backgrounds clear. The live dimension readout shows the board size and a `(1:1)` marker when every sprite pixel is one bead.
 - **Photo mode** — smooth, averaged matching for ordinary photos and gradients
-- Board width slider plus one-click presets for standard 29-peg boards (1–4 wide), and sprite-size presets (16/24/29/32/48/64/96/128 square)
+- Board width slider plus one-click presets for standard 29-peg boards (1–4 wide), sprite-size presets (16/24/29/32/48/64/96/128 square) for resampling, and a **1 : 1 exact** button to snap back to true 1:1
 - Zoom slider for comfortable viewing
 - Every pixel is matched to the closest real bead color in perceptual (Lab) color space
 - Filter which bead types the matcher may use
@@ -31,6 +33,19 @@ Turn any image into a fuse-bead pattern using the real Perler palette.
 - Check off colors you already own — saved in your browser and remembered next visit
 - Auto-generated **shopping list** of just the colors you still need, with a copy button
 - Export the finished pattern as a PNG
+
+## Bead Studio
+
+An all-in-one studio that combines a full color inventory with the image-to-pattern tool. Ideal if you want to design a pattern **from the beads you actually own**.
+
+- **Master color inventory** — browse and check off every Perler color you own, saved in your browser and remembered next visit
+- Search, family filter, and "I have these" / "I need these" views over the 170-color US palette
+- Turn any image into a bead pattern (drag-and-drop or click; nothing is uploaded — it stays on your device)
+- **Use only my owned colors** — matches every bead to the nearest color you already own, so the whole pattern (including approximate color shifts) is buildable from your stash with nothing extra to buy
+- Sprite mode for pixel art (true 1:1, transparency kept clear) and photo mode for smooth averaged matching
+- Clear status banner shows exactly which owned colors each pattern was built from
+- If you haven't checked off any owned colors, it gracefully falls back to the full palette so you can still see your pattern
+- Color checklist, auto-generated shopping list of colors you still need, and PNG export
 
 ## Notes
 
