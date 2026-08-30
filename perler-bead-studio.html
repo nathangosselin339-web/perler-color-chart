@@ -85,6 +85,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--ok);cursor:pointe
   repeating-conic-gradient(#141720 0% 25%,#191d27 0% 50%) 0 0/22px 22px;margin-top:12px}
 canvas#patternCanvas{display:block;image-rendering:pixelated}
 .ctrl-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:10px}
+.smode-scope{align-items:center;gap:10px;flex-wrap:wrap}
+.smode-help{font-size:.72rem;color:var(--dim);max-width:520px}
+.chip.pick{outline:2px solid var(--accent);outline-offset:2px;color:#fff}
 .ctrl-row label{font-size:.82rem;color:var(--dim);display:flex;align-items:center;gap:6px}
 input[type=range]{accent-color:var(--accent);width:120px}
 button.act{cursor:pointer;padding:7px 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:.82rem;font-weight:600;transition:.15s}
@@ -161,8 +164,15 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
         <label>Width <input id="wRange" type="range" min="4" max="320" value="29"> <b id="wVal" style="min-width:3ch;color:var(--text)">29</b></label>
         <span id="dimLabel" style="font-size:.75rem;color:var(--dim);font-family:Consolas,monospace;white-space:nowrap"></span>
         <span class="presets" id="presets"></span>
+        <span class="presets hidden" id="spritePresets"></span>
         <label>Zoom <input id="zRange" type="range" min="4" max="40" value="14"></label>
         <button class="act pri" id="exportBtn">Export PNG</button>
+      </div>
+      <div class="ctrl-row smode">
+        <button class="chip" id="spriteOff">Photo mode</button>
+        <button class="chip on" id="spriteOn">Sprite mode</button>
+        <button class="chip" id="oneToOne" style="background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600">1&thinsp;:&thinsp;1 exact</button>
+        <span class="smode-help" style="font-size:.72rem;color:var(--dim)">Sprites &amp; pixel art: each sprite pixel becomes one bead (1:1), crisp edges, transparency kept clear.</span>
       </div>
       <div class="ctrl-row">
         <label style="cursor:pointer"><input type="checkbox" id="ownOnly" checked> Match using my owned colors only</label>
@@ -409,16 +419,47 @@ const ownOnlyEl=document.getElementById("ownOnly");
 
 const PRESETS=[[29,"1 board"],[58,"2 boards"],[87,"3 boards"],[116,"4 boards"]];
 const presetsEl=document.getElementById("presets");
+const spritePresetsEl=document.getElementById("spritePresets");
+const spriteOnEl=document.getElementById("spriteOn");
+const spriteOffEl=document.getElementById("spriteOff");
+const oneToOneEl=document.getElementById("oneToOne");
+let spriteMode=true;
+
 PRESETS.forEach(([n,title])=>{
   const b=document.createElement("button");
   b.className="preset";b.textContent=n;b.title=title;
-  b.addEventListener("click",()=>setW(n));
+  b.addEventListener("click",()=>setPhotoW(n));
   presetsEl.appendChild(b);
 });
+[[16,"16"],[24,"24"],[29,"29"],[32,"32"],[48,"48"],[64,"64"],[96,"96"],[128,"128"]].forEach(([n])=>{
+  const b=document.createElement("button");
+  b.className="preset sprite";b.textContent=n;b.title="Sprite "+n+" x "+n;
+  b.addEventListener("click",()=>setSquare(n));
+  spritePresetsEl.appendChild(b);
+});
 
-function setW(n){cellW=n;document.getElementById("wRange").value=n;document.getElementById("wVal").textContent=n;if(img)processImage()}
+function syncW(){document.getElementById("wRange").value=cellW;document.getElementById("wVal").textContent=cellW}
+function setPhotoW(n){cellW=n;syncW();if(img)processImage()}
+function setSquare(n){cellW=n;cellH=n;syncW();if(img)processImage()}
 document.getElementById("wRange").addEventListener("input",e=>{cellW=+e.target.value;document.getElementById("wVal").textContent=cellW;if(img)processImage()});
 document.getElementById("zRange").addEventListener("input",e=>{zoomPx=+e.target.value;if(patMap)renderPattern()});
+
+function setMode(sprite){
+  spriteMode=sprite;
+  spriteOnEl.classList.toggle("on",sprite);
+  spriteOffEl.classList.toggle("on",!sprite);
+  presetsEl.classList.toggle("hidden",sprite);
+  spritePresetsEl.classList.toggle("hidden",!sprite);
+  oneToOneEl.classList.toggle("hidden",!sprite);
+  if(img)processImage();
+}
+spriteOnEl.addEventListener("click",()=>setMode(true));
+spriteOffEl.addEventListener("click",()=>setMode(false));
+oneToOneEl.addEventListener("click",()=>{
+  if(!img)return;
+  cellW=img.width;cellH=img.height;syncW();
+  processImage();
+});
 
 dropZone.addEventListener("click",()=>{const i=document.createElement("input");i.type="file";i.accept="image/*";i.onchange=()=>i.files[0]&&loadImage(i.files[0]);i.click()});
 dropZone.addEventListener("dragover",e=>{e.preventDefault();dropZone.classList.add("over")});
@@ -430,9 +471,11 @@ function loadImage(file){
   const url=URL.createObjectURL(file),im=new Image();
   im.onload=()=>{
     img=im;URL.revokeObjectURL(url);
-    cellW=Math.min(img.width,29);
-    document.getElementById("wRange").value=cellW;
-    document.getElementById("wVal").textContent=cellW;
+    const small=img.width<=160&&img.height<=160;
+    setMode(small);
+    if(spriteMode){cellW=img.width;cellH=img.height;}
+    else{cellW=Math.min(img.width,29);}
+    syncW();
     patternWork.classList.remove("hidden");
     patternArea.classList.remove("hidden");
     processImage();
@@ -461,41 +504,73 @@ ownOnlyEl.addEventListener("change",()=>{
 
 function processImage(){
   if(!img)return;
-  const aspect=img.height/img.width;
-  cellH=Math.max(1,Math.round(cellW*aspect));
-  const off=document.createElement("canvas");
-  off.width=Math.max(cellW,Math.round(img.width*.8));
-  off.height=Math.max(cellH,Math.round(img.height*.8));
-  const octx=off.getContext("2d",{willReadFrequently:true});
-  octx.imageSmoothingEnabled=true;octx.imageSmoothingQuality="high";
-  octx.drawImage(img,0,0,off.width,off.height);
-  const sx=off.width/cellW,sy=off.height/cellH;
-  const data=octx.getImageData(0,0,off.width,off.height).data;
   const pal=getActivePal();
-  patMap=[];
-  for(let y=0;y<cellH;y++){
-    const row=[];
-    for(let x=0;x<cellW;x++){
-      const x0=Math.floor(x*sx),y0=Math.floor(y*sy);
-      const x1=Math.min(off.width,Math.floor((x+1)*sx)),y1=Math.min(off.height,Math.floor((y+1)*sy));
-      let r=0,g=0,b=0,a=0,n=0;
-      for(let yy=y0;yy<y1;yy++)for(let xx=x0;xx<x1;xx++){
-        const o=(yy*off.width+xx)*4;r+=data[o];g+=data[o+1];b+=data[o+2];a+=data[o+3];n++;
+
+  if(spriteMode){
+    const W=img.width,H=img.height;
+    const src=document.createElement("canvas");
+    src.width=W;src.height=H;
+    const sctx=src.getContext("2d",{willReadFrequently:true});
+    sctx.drawImage(img,0,0);
+    let sd;
+    try{sd=sctx.getImageData(0,0,W,H).data}catch(e){sd=null}
+    const tw=Math.max(1,Math.round(cellW||W));
+    const sc=tw/Math.max(1,W);
+    const th=Math.max(1,Math.round(H*sc));
+    cellW=tw;cellH=th;
+    patMap=[];
+    if(sd){
+      for(let y=0;y<th;y++){
+        const row=[];
+        const sy=Math.min(H-1,Math.floor(y/sc));
+        for(let x=0;x<tw;x++){
+          const sx=Math.min(W-1,Math.floor(x/sc));
+          const o=(sy*W+sx)*4;
+          if(sd[o+3]<128){row.push(null);continue}
+          row.push(nearest(sd[o],sd[o+1],sd[o+2],pal));
+        }
+        patMap.push(row);
       }
-      if(a/n<128){row.push(null)}
-      else if(pal.length===0){row.push(null)}
-      else{row.push(nearest(r/n,g/n,b/n,pal))}
+    }else{
+      for(let y=0;y<th;y++){const row=[];for(let x=0;x<tw;x++)row.push(null);patMap.push(row);}
     }
-    patMap.push(row);
+  }else{
+    const aspect=img.height/img.width;
+    cellH=Math.max(1,Math.round(cellW*aspect));
+    const off=document.createElement("canvas");
+    off.width=Math.max(cellW,Math.round(img.width*.8));
+    off.height=Math.max(cellH,Math.round(img.height*.8));
+    const octx=off.getContext("2d",{willReadFrequently:true});
+    octx.imageSmoothingEnabled=true;octx.imageSmoothingQuality="high";
+    octx.drawImage(img,0,0,off.width,off.height);
+    const sx=off.width/cellW,sy=off.height/cellH;
+    const data=octx.getImageData(0,0,off.width,off.height).data;
+    patMap=[];
+    for(let y=0;y<cellH;y++){
+      const row=[];
+      for(let x=0;x<cellW;x++){
+        const x0=Math.floor(x*sx),y0=Math.floor(y*sy);
+        const x1=Math.min(off.width,Math.floor((x+1)*sx)),y1=Math.min(off.height,Math.floor((y+1)*sy));
+        let r=0,g=0,b=0,a=0,n=0;
+        for(let yy=y0;yy<y1;yy++)for(let xx=x0;xx<x1;xx++){
+          const o=(yy*off.width+xx)*4;r+=data[o];g+=data[o+1];b+=data[o+2];a+=data[o+3];n++;
+        }
+        if(a/n<128){row.push(null)}
+        else if(pal.length===0){row.push(null)}
+        else{row.push(nearest(r/n,g/n,b/n,pal))}
+      }
+      patMap.push(row);
+    }
   }
-  document.getElementById("dimLabel").textContent=`${cellW} \u00d7 ${cellH}`;
+  document.getElementById("dimLabel").textContent=`${cellW} \u00d7 ${cellH}${spriteMode?((cellW===img.width&&cellH===img.height)?" (1:1)":""):""}`;
   const mi=document.getElementById("matchInfo");
+  const modeTxt=spriteMode?"sprite":"photo";
   if(palFellBack){
     mi.textContent="You haven't marked any owned colors yet, so I used the full palette so you can still see your pattern. Tick 'I have this' on the colors you own (or uncheck 'owned colors only') to match only what you have.";
   }else if(ownOnlyEl.checked){
-    mi.textContent=`Matching against ${pal.length} owned solid color${pal.length===1?"":"s"}`;
+    mi.textContent=`${modeTxt} mode matching against ${pal.length} owned solid color${pal.length===1?"":"s"}`;
   }else{
-    mi.textContent=`Matching against ${allPalette.length} colors (all types)`;
+    mi.textContent=`${modeTxt} mode matching against ${allPalette.length} colors (all types)`;
   }
   renderPattern();
   renderPatternList();
