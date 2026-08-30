@@ -440,10 +440,18 @@ function loadImage(file){
   im.src=url;
 }
 
+let palFellBack=false;
 function getActivePal(){
   if(ownOnlyEl.checked){
-    return solidPalette.filter(p=>owned.has(p.name));
+    const ownedPal=solidPalette.filter(p=>owned.has(p.name));
+    palFellBack=false;
+    if(ownedPal.length===0){
+      palFellBack=true;
+      return solidPalette;
+    }
+    return ownedPal;
   }
+  palFellBack=false;
   return allPalette;
 }
 
@@ -481,7 +489,14 @@ function processImage(){
     patMap.push(row);
   }
   document.getElementById("dimLabel").textContent=`${cellW} \u00d7 ${cellH}`;
-  document.getElementById("matchInfo").textContent=ownOnlyEl.checked?`Matching against ${pal.length} owned solid colors`:`Matching against ${allPalette.length} colors (all types)`;
+  const mi=document.getElementById("matchInfo");
+  if(palFellBack){
+    mi.textContent="You haven't marked any owned colors yet, so I used the full palette so you can still see your pattern. Tick 'I have this' on the colors you own (or uncheck 'owned colors only') to match only what you have.";
+  }else if(ownOnlyEl.checked){
+    mi.textContent=`Matching against ${pal.length} owned solid color${pal.length===1?"":"s"}`;
+  }else{
+    mi.textContent=`Matching against ${allPalette.length} colors (all types)`;
+  }
   renderPattern();
   renderPatternList();
 }
