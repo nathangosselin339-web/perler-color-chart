@@ -175,7 +175,7 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
         <span class="smode-help" style="font-size:.72rem;color:var(--dim)">Sprites &amp; pixel art: each sprite pixel becomes one bead (1:1), crisp edges, transparency kept clear.</span>
       </div>
       <div class="ctrl-row">
-        <label style="cursor:pointer"><input type="checkbox" id="ownOnly" checked> Match using my owned colors only</label>
+        <label style="cursor:pointer"><input type="checkbox" id="ownOnly" checked> Use only my owned colors</label>
         <span style="font-size:.72rem;color:var(--dim)" id="matchInfo"></span>
       </div>
     </div>
@@ -189,6 +189,7 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
       </div>
       <aside class="side panel">
         <div class="label">Colors used in pattern</div>
+        <div id="patternSourceNote" class="hidden" style="font-size:.8rem;line-height:1.35;padding:8px 10px;margin-bottom:10px;border-radius:8px;background:var(--panel);border:1px solid var(--line)"></div>
         <div class="stats">
           <div class="stat"><b id="pColors">0</b><span>colors</span></div>
           <div class="stat"><b id="pBeads">0</b><span>beads</span></div>
@@ -564,13 +565,22 @@ function processImage(){
   }
   document.getElementById("dimLabel").textContent=`${cellW} \u00d7 ${cellH}${spriteMode?((cellW===img.width&&cellH===img.height)?" (1:1)":""):""}`;
   const mi=document.getElementById("matchInfo");
+  const note=document.getElementById("patternSourceNote");
   const modeTxt=spriteMode?"sprite":"photo";
   if(palFellBack){
     mi.textContent="You haven't marked any owned colors yet, so I used the full palette so you can still see your pattern. Tick 'I have this' on the colors you own (or uncheck 'owned colors only') to match only what you have.";
+    note.classList.add("hidden");
   }else if(ownOnlyEl.checked){
     mi.textContent=`${modeTxt} mode matching against ${pal.length} owned solid color${pal.length===1?"":"s"}`;
+    note.classList.remove("hidden");
+    const names=pal.map(p=>p.name).sort();
+    const n=names.length;
+    note.innerHTML=`<b style="color:var(--ok)">&#10003; Building only from your ${n} owned color${n===1?"":"s"}</b><br>`+
+      `<span style="color:var(--dim);font-size:.72rem">Every bead maps to one you already own &mdash; nothing to buy.</span><br>`+
+      `<span style="font-size:.7rem">${names.join(", ")}</span>`;
   }else{
     mi.textContent=`${modeTxt} mode matching against ${allPalette.length} colors (all types)`;
+    note.classList.add("hidden");
   }
   renderPattern();
   renderPatternList();
