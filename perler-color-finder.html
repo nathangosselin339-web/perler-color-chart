@@ -37,7 +37,6 @@ button.mini:hover{border-color:#46506a;background:#20242f}
 
 .photo-wrap{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);display:none}
 .photo-wrap.show{display:block}
-video#camvideo{display:block;width:100%;max-height:420px;object-fit:contain;background:#000}
 canvas#samplecanv{display:block;width:100%;cursor:crosshair;image-rendering:pixelated}
 .photo-hint{font-size:.78rem;color:var(--dim);text-align:center;padding:8px}
 .sample-dot{position:absolute;pointer-events:none;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 8px rgba(0,0,0,.5);border-radius:50%;transform:translate(-50%,-50%);z-index:5}
@@ -122,7 +121,6 @@ footer{max-width:1200px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
     </div>
 
 <div class="photo-wrap" id="photoWrap">
-      <video id="camvideo" autoplay playsinline muted></video>
       <canvas id="samplecanv"></canvas>
       <div class="photo-hint" id="photoHint">Click anywhere on the photo to match that area.</div>
       <div class="sample-dot" id="sampleDot"></div>
@@ -220,7 +218,6 @@ const fileThumb=document.getElementById("fileThumb");
 const fileDotText=document.getElementById("fileDotText");
 const clearBtn=document.getElementById("clearBtn");
 const photoWrap=document.getElementById("photoWrap");
-const camvideo=document.getElementById("camvideo");
 const samplecanv=document.getElementById("samplecanv");
 const photoHint=document.getElementById("photoHint");
 const sampleDot=document.getElementById("sampleDot");
@@ -244,10 +241,7 @@ const fitZoomBtn=document.getElementById("fitZoomBtn");
 const retakeBtn=document.getElementById("retakeBtn");
 const loupe=document.getElementById("loupe");
 
-let stream=null;
 let lastResult=null;
-
-function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;camvideo.style.display="none"}}
 
 function setSource(canvas){
   /* show a loaded image (static) on the sample canvas */
@@ -282,14 +276,12 @@ zoomRange.addEventListener("input",()=>{
   setZoom(parseInt(zoomRange.value,10));
 });
 fitZoomBtn.addEventListener("click",()=>resetZoom());
-retakeBtn.addEventListener("click",()=>camBtn.click());
 
 function loadImageFile(file){
   const reader=new FileReader();
   reader.onload=e=>{
     const im=new Image();
     im.onload=()=>{
-      stopCam();
       const cv=document.createElement("canvas");
       cv.width=im.width;cv.height=im.height;
       cv.getContext("2d").drawImage(im,0,0);
@@ -306,41 +298,23 @@ function loadImageFile(file){
 
 pickBtn.addEventListener("click",()=>{fileIn.removeAttribute("capture");fileIn.click()});
 fileIn.addEventListener("change",()=>{if(fileIn.files[0])loadImageFile(fileIn.files[0])});
-clearBtn.addEventListener("click",()=>{fileDot.classList.remove("show");photoWrap.classList.remove("show");resultGrid.classList.add("hidden");rankPanel.classList.add("hidden");zoomRow.classList.add("hidden");hideLoupe();stopCam();img=null;});
+clearBtn.addEventListener("click",()=>{fileDot.classList.remove("show");photoWrap.classList.remove("show");resultGrid.classList.add("hidden");rankPanel.classList.add("hidden");zoomRow.classList.add("hidden");hideLoupe();img=null;});
 
-camBtn.addEventListener("click",async()=>{
+camBtn.addEventListener("click",()=>{
   fileDot.classList.remove("show");
-  photoHint.textContent="Point camera at the bead, then tap the video to sample it.";
+  photoHint.textContent="Take a clear photo of the bead — fill the frame and hold steady. Tap the bead to match it.";
   zoomRow.classList.add("hidden");
   photoWrap.classList.add("show");
   resultGrid.classList.remove("hidden");
   sampleDot.style.display="none";
-  loupe.classList.add("hidden");
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1600},height:{ideal:1200}},audio:false});
-    if(!stream||!stream.active){photoHint.textContent="Camera unavailable.";return}
-    camvideo.srcObject=stream;
-    await camvideo.play();
-    camvideo.style.display="block";
-  }catch(e){
-    photoHint.textContent="Camera unavailable: "+e.message;
-    return;
-  }
+  hideLoupe();
+  /* use file input with capture to open native camera (reliable on mobile) */
+  fileIn.setAttribute("capture","environment");
+  fileIn.click();
 });
 
-/* Clicking the video samples the live frame directly */
-camvideo.addEventListener("click",()=>{
-  if(!stream)return;
-  const w=camvideo.videoWidth,h=camvideo.videoHeight;
-  if(!w||!h)return;
-  const cv=document.createElement("canvas");
-  cv.width=w;cv.height=h;
-  cv.getContext("2d").drawImage(camvideo,0,0);
-  /* Replace video with the frozen frame as the clickable sample canvas */
-  stopCam();
-  zoomRow.classList.remove("hidden");
-  setSource(cv);
-});
+/* "Retake photo" = reopen native camera */
+retakeBtn.addEventListener("click",()=>camBtn.click());
 
 /* Loupe magnifier over the frozen image — pixel-sharp, drawn into its own canvas */
 let loupeCanv=null;
