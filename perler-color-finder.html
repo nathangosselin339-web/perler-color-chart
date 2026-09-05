@@ -41,6 +41,11 @@ video#camvideo{display:block;width:100%;max-height:420px;object-fit:contain;back
 canvas#samplecanv{display:block;width:100%;cursor:crosshair;image-rendering:pixelated}
 .photo-hint{font-size:.78rem;color:var(--dim);text-align:center;padding:8px}
 .sample-dot{position:absolute;pointer-events:none;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 8px rgba(0,0,0,.5);border-radius:50%;transform:translate(-50%,-50%);z-index:5}
+#loupe{position:absolute;pointer-events:none;width:150px;height:150px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.5),0 4px 18px rgba(0,0,0,.55);z-index:6;display:none;overflow:hidden}
+.photo-wrap.loupe-on #loupe{display:block}
+.zoom-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px;padding:8px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.zoom-row label{font-size:.8rem;color:var(--dim);display:flex;align-items:center;gap:6px}
+.zoom-row input[type=range]{width:160px}
 
 .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;
   grid-template-areas:"match sample";align-items:start}
@@ -116,11 +121,18 @@ footer{max-width:1200px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
       <button class="mini" id="clearBtn">&times; clear</button>
     </div>
 
-    <div class="photo-wrap" id="photoWrap">
+<div class="photo-wrap" id="photoWrap">
       <video id="camvideo" autoplay playsinline muted></video>
       <canvas id="samplecanv"></canvas>
       <div class="photo-hint" id="photoHint">Click anywhere on the photo to match that area.</div>
       <div class="sample-dot" id="sampleDot"></div>
+      <div id="loupe" class="hidden"></div>
+    </div>
+
+    <div class="zoom-row hidden" id="zoomRow">
+      <label>&#128269; Zoom <input id="zoomRange" type="range" min="100" max="500" step="25" value="100"> <b id="zoomVal" style="color:var(--text);min-width:3ch">100%</b></label>
+      <button class="mini" id="fitZoomBtn">Fit</button>
+      <span id="retakeBtn" class="mini" style="margin-left:auto;cursor:pointer">&#8635; Retake photo</span>
     </div>
   </div>
 
@@ -225,6 +237,12 @@ const matchDeltaBar=document.getElementById("matchDeltaBar");
 const sampleSw=document.getElementById("sampleSw");
 const sampleHex=document.getElementById("sampleHex");
 const copyBtn=document.getElementById("copyBtn");
+const zoomRow=document.getElementById("zoomRow");
+const zoomRange=document.getElementById("zoomRange");
+const zoomVal=document.getElementById("zoomVal");
+const fitZoomBtn=document.getElementById("fitZoomBtn");
+const retakeBtn=document.getElementById("retakeBtn");
+const loupe=document.getElementById("loupe");
 
 let stream=null;
 let lastResult=null;
@@ -245,7 +263,26 @@ function setSource(canvas){
   img={canvas:cv,ctx};
   photoHint.textContent="Click anywhere on the photo to match that area.";
   sampleDot.style.display="none";
+  zoomRow.classList.remove("hidden");
+  /* reset zoom to fit */
+  resetZoom();
 }
+
+function setZoom(pct){
+  zoomRange.value=pct;
+  zoomVal.textContent=pct+"%";
+  samplecanv.style.width="calc("+pct+"% )";
+}
+function resetZoom(){
+  setZoom(100);
+  samplecanv.style.width="100%";
+  zoomRange.value=100;zoomVal.textContent="100%";
+}
+zoomRange.addEventListener("input",()=>{
+  setZoom(parseInt(zoomRange.value,10));
+});
+fitZoomBtn.addEventListener("click",()=>resetZoom());
+retakeBtn.addEventListener("click",()=>camBtn.click());
 
 function loadImageFile(file){
   const reader=new FileReader();
@@ -269,18 +306,21 @@ function loadImageFile(file){
 
 pickBtn.addEventListener("click",()=>{fileIn.removeAttribute("capture");fileIn.click()});
 fileIn.addEventListener("change",()=>{if(fileIn.files[0])loadImageFile(fileIn.files[0])});
-clearBtn.addEventListener("click",()=>{fileDot.classList.remove("show");photoWrap.classList.remove("show");resultGrid.classList.add("hidden");rankPanel.classList.add("hidden");stopCam();img=null;});
+clearBtn.addEventListener("click",()=>{fileDot.classList.remove("show");photoWrap.classList.remove("show");resultGrid.classList.add("hidden");rankPanel.classList.add("hidden");zoomRow.classList.add("hidden");hideLoupe();stopCam();img=null;});
 
 camBtn.addEventListener("click",async()=>{
   fileDot.classList.remove("show");
   photoHint.textContent="Point camera at the bead, then tap the video to sample it.";
+  zoomRow.classList.add("hidden");
   photoWrap.classList.add("show");
   resultGrid.classList.remove("hidden");
   sampleDot.style.display="none";
+  loupe.classList.add("hidden");
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1600},height:{ideal:1200}},audio:false});
     if(!stream||!stream.active){photoHint.textContent="Camera unavailable.";return}
     camvideo.srcObject=stream;
+    await camvideo.play();
     camvideo.style.display="block";
   }catch(e){
     photoHint.textContent="Camera unavailable: "+e.message;
@@ -298,8 +338,57 @@ camvideo.addEventListener("click",()=>{
   cv.getContext("2d").drawImage(camvideo,0,0);
   /* Replace video with the frozen frame as the clickable sample canvas */
   stopCam();
+  zoomRow.classList.remove("hidden");
   setSource(cv);
 });
+
+/* Loupe magnifier over the frozen image — pixel-sharp, drawn into its own canvas */
+let loupeCanv=null;
+function showLoupe(e){
+  if(!img)return;
+  const rect=samplecanv.getBoundingClientRect();
+  const cx=e.clientX-rect.left,cy=e.clientY-rect.top;
+  if(cx<0||cy<0||cx>rect.width||cy>rect.height){hideLoupe();return}
+  photoWrap.classList.add("loupe-on");
+  loupe.style.display="block";
+  if(!loupeCanv){
+    loupeCanv=document.createElement("canvas");
+    loupeCanv.width=loupe.offsetWidth;loupeCanv.height=loupe.offsetHeight;
+    loupeCanv.style.display="none";
+  }
+  /* map cursor to source pixel */
+  const pxc=cx/rect.width*samplecanv.width,pyc=cy/rect.height*samplecanv.height;
+  const step=Math.max(1,Math.round(samplecanv.width/Math.max(1,rect.width))); /* source px per screen px */
+  const vw=loupe.width,vh=loupe.height;
+  const ctx2=loupeCanv.getContext("2d");
+  ctx2.imageSmoothingEnabled=false;
+  ctx2.drawImage(samplecanv,
+    Math.max(0,Math.min(samplecanv.width-2,Math.floor(pxc-vw/2))),
+    Math.max(0,Math.min(samplecanv.height-2,Math.floor(pyc-vh/2))),
+    vw,vh,
+    0,0,vw,vh);
+  loupe.style.backgroundImage="none";
+  loupe.innerHTML="";
+  loupe.appendChild(loupeCanv);
+  loupeCanv.style.display="block";
+  let z=Math.round(100*samplecanv.width/rect.width);
+  if(z<4)z=4; /* caps to avoid insane blur */
+  if(step>Math.max(2,z)){ /* source is bigger than screen: magnify via CSS pixelated for sharpness */
+    loupeCanv.style.width=vw*step+"px";loupeCanv.style.height=vh*step+"px";
+    loupeCanv.imageRendering="pixelated";
+  } else {
+    loupeCanv.style.width=vw+"px";loupeCanv.style.height=vh+"px";
+  }
+  const wr=photoWrap.getBoundingClientRect();
+  let lx=e.clientX-wr.left-loupe.offsetWidth-10,ly=e.clientY-wr.top-loupe.offsetHeight/2;
+  lx=Math.max(0,Math.min(lx,photoWrap.clientWidth-loupe.offsetWidth));
+  ly=Math.max(0,Math.min(ly,photoWrap.clientHeight-loupe.offsetHeight));
+  loupe.style.left=lx+"px";loupe.style.top=ly+"px";
+}
+function hideLoupe(){photoWrap.classList.remove("loupe-on");loupe.style.display="none"}
+samplecanv.addEventListener("mousemove",showLoupe);
+samplecanv.addEventListener("mouseleave",hideLoupe);
+samplecanv.addEventListener("touchmove",e=>{e.preventDefault();const t=e.touches[0];showLoupe({clientX:t.clientX,clientY:t.clientY});},{passive:false});
 
 /* ---- click-to-sample ---- */
 samplecanv.addEventListener("click",e=>{
