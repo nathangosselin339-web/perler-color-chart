@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perler Color Finder</title>
+<meta name="description" content="Photograph a bead and find its closest Perler color instantly. Tap any point on the photo to match against the real 170-color Perler palette.">
+<style>
+:root{
+  --bg:#101218;--panel:#171a22;--card:#1c202b;--line:#2a2f3d;
+  --text:#e8eaf0;--dim:#9aa3b5;--accent:#ff5d8f;--ok:#5ee38a;--ok2:#8fe3a1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.45}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+
+header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);background:rgba(16,18,24,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-wrap:wrap}
+header h1{font-size:1.15rem;letter-spacing:.4px;display:flex;align-items:center;gap:10px}
+header h1 .dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffa0c0,#ff5d8f);box-shadow:0 0 0 3px rgba(255,93,143,.22)}
+header nav{display:flex;gap:14px;font-size:.88rem}
+header nav a{color:var(--dim);font-weight:600}header nav a:hover{color:var(--text)}
+.page-glow{position:absolute;top:0;left:0;right:0;height:300px;pointer-events:none;
+  background:radial-gradient(700px 280px at 12% 0%,rgba(255,93,143,.1),transparent),
+  radial-gradient(700px 280px at 88% 0%,rgba(80,170,255,.08),transparent);z-index:0}
+.wrap{position:relative;max-width:1200px;margin:0 auto;padding:16px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.section-title{font-size:1rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section-title .icon{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem}
+.label{font-size:.78rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px}
+
+.capture-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+button.act{cursor:pointer;padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:.84rem;font-weight:600;transition:.15s}
+button.act:hover{border-color:#46506a;background:#20242f}
+button.act.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.mini{cursor:pointer;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:.72rem;font-weight:600;transition:.15s}
+button.mini:hover{border-color:#46506a;background:#20242f}
+
+.photo-wrap{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);display:none}
+.photo-wrap.show{display:block}
+video#camvideo{display:block;width:100%;max-height:420px;object-fit:contain;background:#000}
+canvas#samplecanv{display:block;width:100%;cursor:crosshair;image-rendering:pixelated}
+.photo-hint{font-size:.78rem;color:var(--dim);text-align:center;padding:8px}
+.sample-dot{position:absolute;pointer-events:none;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 8px rgba(0,0,0,.5);border-radius:50%;transform:translate(-50%,-50%);z-index:5}
+
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;
+  grid-template-areas:"match sample";align-items:start}
+@media(max-width:620px){.result-grid{grid-template-columns:1fr;grid-template-areas:"match" "sample"}}
+.match-panel{grid-area:match}
+.sample-panel{grid-area:sample;align-self:start}
+
+.bigw{display:flex;align-items:center;gap:18px}
+.bigsw{width:84px;height:84px;border-radius:50%;flex:none;position:relative;
+  background-image:radial-gradient(circle at 32% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 42%),radial-gradient(circle at 70% 75%,rgba(0,0,0,.25),rgba(0,0,0,0) 50%);
+  box-shadow:inset 0 -4px 8px rgba(0,0,0,.35),inset 0 3px 6px rgba(255,255,255,.18),0 3px 8px rgba(0,0,0,.4)}
+.bigsw::after{content:"";position:absolute;inset:0;margin:auto;width:40%;height:40%;border-radius:50%;background:inherit;background-image:none;filter:brightness(.72);box-shadow:inset 0 3px 5px rgba(0,0,0,.55)}
+.bigsw.calc{background-image:repeating-conic-gradient(#2a2f3d 0% 25%,#222736 0% 50%) 0 0/20px 20px}
+.biginfo b{font-size:1.25rem;display:block}
+.biginfo .code{font-family:Consolas,monospace;color:var(--dim);font-size:.9rem}
+.biginfo .sku{font-size:.78rem;color:var(--dim);font-family:Consolas,monospace}
+.biginfo .verdict{font-size:.84rem;color:var(--ok);font-weight:600;margin-top:6px}
+.bigsw.match{border:2px solid var(--ok);box-shadow:0 0 0 4px rgba(94,227,138,.15),0 0 22px var(--ok)44}
+
+.delta{font-size:.82rem;color:var(--dim);margin-top:10px}
+.deltabar{height:8px;border-radius:999px;background:var(--panel);border:1px solid var(--line);margin-top:4px;overflow:hidden}
+.deltabar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd35e,#ff7e5f,#ff5d8f);transition:width .4s}
+
+.rank-list{margin-top:14px}
+.rank-item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 9px;margin-top:5px;transition:.15s}
+.rank-item.top{border-color:var(--ok);background:rgba(94,227,138,.05)}
+.rank-item .sw{width:26px;height:26px;border-radius:50%;flex:none;box-shadow:inset -2px -3px 5px rgba(0,0,0,.35),inset 1px 2px 4px rgba(255,255,255,.28),0 1px 3px rgba(0,0,0,.5)}
+.rank-item .nm{flex:1;min-width:0;font-size:.82rem}
+.rank-item .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-item .nm span{font-size:.68rem;color:var(--dim);font-family:Consolas,monospace}
+.rank-item .sco{font-size:.7rem;color:var(--dim);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-family:Consolas,monospace}
+
+.file-dot{display:none;align-items:center;gap:12px;margin-bottom:10px;padding:8px 12px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.file-dot.show{display:flex}
+.file-dot .thumb{width:34px;height:34px;border-radius:8px;background-size:cover;border:1px solid var(--line);flex:none}
+.file-dot span{font-size:.8rem;color:var(--dim);flex:1}
+
+.cam-active video{display:block}
+.helper{font-size:.78rem;color:var(--dim);margin-top:8px;line-height:1.5}
+.hidden{display:none!important}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#fff;padding:9px 20px;border-radius:999px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:100}
+.toast.show{opacity:1;transform:translateX(-50%)}
+footer{max-width:1200px;margin:8px auto 30px;padding:0 20px;color:var(--dim);font-size:.78rem;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="page-glow"></div>
+
+<header>
+  <h1><span class="dot"></span>Perler Color Finder</h1>
+  <nav>
+    <a href="./">Color Chart</a>
+    <a href="perler-bead-studio.html">Bead Studio</a>
+    <a href="pattern-maker.html">Pattern Maker</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <div class="panel">
+    <div class="section-title"><span class="icon" style="background:var(--accent);color:#fff">&#9679;</span>Find a Perler color from a photo</div>
+    <div class="capture-row">
+      <button class="act" id="camBtn">&#128247; Take photo</button>
+      <button class="act pri" id="pickBtn">Choose photo file</button>
+      <input type="file" id="fileIn" accept="image/*" class="hidden">
+      <span class="helper">Tap/click any point on the photo to sample that bead's color. The file input uses your camera where available.</span>
+    </div>
+
+    <div class="file-dot" id="fileDot">
+      <div class="thumb" id="fileThumb"></div>
+      <span id="fileDotText">Loaded image</span>
+      <button class="mini" id="clearBtn">&times; clear</button>
+    </div>
+
+    <div class="photo-wrap" id="photoWrap">
+      <video id="camvideo" autoplay playsinline muted></video>
+      <canvas id="samplecanv"></canvas>
+      <div class="photo-hint" id="photoHint">Click anywhere on the photo to match that area.</div>
+      <div class="sample-dot" id="sampleDot"></div>
+    </div>
+  </div>
+
+  <div class="result-grid hidden" id="resultGrid">
+    <div class="panel match-panel">
+      <div class="label">Closest Perler match</div>
+      <div class="bigw">
+        <div class="bigsw calc" id="matchSw"></div>
+        <div class="biginfo">
+          <b id="matchName">&mdash;</b>
+          <span class="code" id="matchCode"></span><br>
+          <span class="sku" id="matchSku"></span>
+          <div class="verdict hidden" id="matchVerdict"></div>
+        </div>
+      </div>
+      <div class="delta" id="matchDelta"></div>
+      <div class="deltabar"><i id="matchDeltaBar"></i></div>
+    </div>
+
+    <div class="panel sample-panel">
+      <div class="label">Sampled color from your photo</div>
+      <div class="bigw">
+        <div class="bigsw calc" id="sampleSw"></div>
+        <div class="biginfo">
+          <b>Sampled color</b>
+          <span class="code" id="sampleHex"></span>
+        </div>
+      </div>
+      <button class="act" id="copyBtn" style="margin-top:10px">Copy match details</button>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="rankPanel" style="margin-top:16px">
+    <div class="label">Nearest Perler colors</div>
+    <div class="rank-list" id="rankList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+
+function toast(m){tEl.textContent=m;tEl.classList.add("show");setTimeout(()=>tEl.classList.remove("show"),1500)}
+
+function hexRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function rgbLab(r,g,b){
+  const f=v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+  r=f(r);g=f(g);b=f(b);
+  let x=(r*.4124+g*.3576+b*.1805)/.95047,y=r*.2126+g*.7152+b*.0722,z=(r*.0193+g*.1192+b*.9505)/1.08883;
+  const k=v=>v>.008856?Math.cbrt(v):7.787*v+16/116;
+  x=k(x);y=k(y);z=k(z);
+  return[116*y-16,500*(x-y),200*(y-z)];
+}
+/* Palette: all non-stripe colors from data.js (matches allPalette in the studio) */
+const palette=COLORS.filter(c=>!c[4].includes("stripe")).map(c=>{
+  const hex=c[3].split("|")[0];
+  const rgb=hexRgb(hex);
+  return{code:c[0],name:c[1],sku:c[2],hex,type:c[4],family:c[5],rgb,lab:rgbLab(...rgb)};
+});
+function nearest(r,g,b){
+  const l=rgbLab(r,g,b);
+  let bi=0,bd=Infinity;
+  for(let i=0;i<palette.length;i++){
+    const p=palette[i].lab,d=(p[0]-l[0])**2+(p[1]-l[1])**2+(p[2]-l[2])**2;
+    if(d<bd){bd=d;bi=i}
+  }
+  return{pal:palette[bi],dist:Math.sqrt(bd)};
+}
+/* Simple perceptual closeness: compress Lab distance into 0-100 */
+function pctColor(dist){
+  return Math.max(0,Math.min(100,Math.round(100-100*Math.tanh(dist/14))));
+}
+
+let img=null;
+const tEl=document.getElementById("toast");
+const camBtn=document.getElementById("camBtn");
+const pickBtn=document.getElementById("pickBtn");
+const fileIn=document.getElementById("fileIn");
+const fileDot=document.getElementById("fileDot");
+const fileThumb=document.getElementById("fileThumb");
+const fileDotText=document.getElementById("fileDotText");
+const clearBtn=document.getElementById("clearBtn");
+const photoWrap=document.getElementById("photoWrap");
+const camvideo=document.getElementById("camvideo");
+const samplecanv=document.getElementById("samplecanv");
+const photoHint=document.getElementById("photoHint");
+const sampleDot=document.getElementById("sampleDot");
+const resultGrid=document.getElementById("resultGrid");
+const rankPanel=document.getElementById("rankPanel");
+const rankList=document.getElementById("rankList");
+const matchSw=document.getElementById("matchSw");
+const matchName=document.getElementById("matchName");
+const matchCode=document.getElementById("matchCode");
+const matchSku=document.getElementById("matchSku");
+const matchVerdict=document.getElementById("matchVerdict");
+const matchDelta=document.getElementById("matchDelta");
+const matchDeltaBar=document.getElementById("matchDeltaBar");
+const sampleSw=document.getElementById("sampleSw");
+const sampleHex=document.getElementById("sampleHex");
+const copyBtn=document.getElementById("copyBtn");
+
+let stream=null;
+let lastResult=null;
+
+function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;camvideo.style.display="none"}}
+
+function setSource(canvas){
+  /* show a loaded image (static) on the sample canvas */
+  photoWrap.classList.add("show");
+  resultGrid.classList.remove("hidden");
+  const cv=samplecanv;
+  cv.removeAttribute("width");cv.removeAttribute("height");
+  const w=canvas.width,h=canvas.height;
+  cv.width=w;cv.height=h;
+  const ctx=cv.getContext("2d");
+  ctx.clearRect(0,0,w,h);
+  ctx.drawImage(canvas,0,0);
+  img={canvas:cv,ctx};
+  photoHint.textContent="Click anywhere on the photo to match that area.";
+  sampleDot.style.display="none";
+}
+
+function loadImageFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const im=new Image();
+    im.onload=()=>{
+      stopCam();
+      const cv=document.createElement("canvas");
+      cv.width=im.width;cv.height=im.height;
+      cv.getContext("2d").drawImage(im,0,0);
+      fileDot.classList.add("show");
+      fileThumb.style.backgroundImage=`url(${e.target.result})`;
+      fileDotText.textContent=file.name||"Loaded image";
+      fileIn.value="";
+      setSource(cv);
+    };
+    im.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+pickBtn.addEventListener("click",()=>{fileIn.removeAttribute("capture");fileIn.click()});
+fileIn.addEventListener("change",()=>{if(fileIn.files[0])loadImageFile(fileIn.files[0])});
+clearBtn.addEventListener("click",()=>{fileDot.classList.remove("show");photoWrap.classList.remove("show");resultGrid.classList.add("hidden");rankPanel.classList.add("hidden");stopCam();img=null;});
+
+camBtn.addEventListener("click",async()=>{
+  fileDot.classList.remove("show");
+  photoHint.textContent="Point camera at the bead, then tap the video to sample it.";
+  photoWrap.classList.add("show");
+  resultGrid.classList.remove("hidden");
+  sampleDot.style.display="none";
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    if(!stream||!stream.active){photoHint.textContent="Camera unavailable.";return}
+    camvideo.srcObject=stream;
+    camvideo.style.display="block";
+  }catch(e){
+    photoHint.textContent="Camera unavailable: "+e.message;
+    return;
+  }
+});
+
+/* Clicking the video samples the live frame directly */
+camvideo.addEventListener("click",()=>{
+  if(!stream)return;
+  const w=camvideo.videoWidth,h=camvideo.videoHeight;
+  if(!w||!h)return;
+  const cv=document.createElement("canvas");
+  cv.width=w;cv.height=h;
+  cv.getContext("2d").drawImage(camvideo,0,0);
+  /* Replace video with the frozen frame as the clickable sample canvas */
+  stopCam();
+  setSource(cv);
+});
+
+/* ---- click-to-sample ---- */
+samplecanv.addEventListener("click",e=>{
+  if(!img)return;
+  const rect=samplecanv.getBoundingClientRect();
+  const sx=(e.clientX-rect.left)/rect.width*samplecanv.width;
+  const sy=(e.clientY-rect.top)/rect.height*samplecanv.height;
+  sampleDot.style.display="block";
+  const x=Math.round(sx),y=Math.round(sy);
+
+  /* average a small region around the click (3x3, center-weighted) */
+  const ctx=samplecanv.getContext("2d");
+  let r=0,g=0,b=0,a=0,n=0;
+  const w=samplecanv.width,h=samplecanv.height;
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    const px=x+dx,py=y+dy;
+    if(px<0||py<0||px>=w||py>=h)continue;
+    const d=ctx.getImageData(px,py,1,1).data;
+    if(d[3]<128){continue}  /* skip transparent pixels entirely */
+    r+=d[0];g+=d[1];b+=d[2];a+=d[3];n++;
+  }
+  if(!n){toast("That spot looks empty - click a bead");return}
+  r/=n;g/=n;b/=n;
+  const hex="#"+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,"0")).join("").toUpperCase();
+
+  const res=nearest(r,g,b);
+  const dlab=Math.sqrt((rgbLab(Math.round(r),Math.round(g),Math.round(b))[0]-res.pal.lab[0])**2+
+    (rgbLab(Math.round(r),Math.round(g),Math.round(b))[1]-res.pal.lab[1])**2+
+    (rgbLab(Math.round(r),Math.round(g),Math.round(b))[2]-res.pal.lab[2])**2);
+  const pct=pctColor(dlab);
+  lastResult={hex:hex,rgb:[Math.round(r),Math.round(g),Math.round(b)],dlab:dlab,pal:res.pal,pct:pct};
+
+  /* sample dot placed at the clicked point (relative to wrapper) */
+  sampleDot.style.left=((e.clientX-photoWrap.getBoundingClientRect().left))+"px";
+  sampleDot.style.top=((e.clientY-photoWrap.getBoundingClientRect().top))+"px";
+
+  /* match panel */
+  matchSw.className="bigsw calc";void matchSw.offsetWidth;matchSw.className="bigsw calc match";
+  matchSw.style.backgroundColor=res.pal.hex;
+  matchSw.style.backgroundImage=`radial-gradient(circle at 32% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 42%),radial-gradient(circle at 70% 75%,rgba(0,0,0,.25),rgba(0,0,0,0) 50%),linear-gradient(${res.pal.hex},${res.pal.hex})`;
+  matchName.textContent=res.pal.name;
+  matchCode.textContent=res.pal.code||"";
+  matchSku.textContent=res.pal.sku?("SKU "+res.pal.sku):"";
+  matchVerdict.classList.remove("hidden");
+  matchVerdict.textContent=pct>=80?"Great match":pct>=60?"Close match":"Approximate";
+  matchDelta.textContent="Distance to "+res.pal.name+": \u0394E "+dlab.toFixed(1)+"   (closeness \u2248 "+pct+"%)";
+  matchDeltaBar.style.width=pct+"%";
+
+  /* sample panel */
+  sampleSw.className="bigsw calc";
+  sampleSw.style.backgroundColor=hex;
+  sampleSw.style.backgroundImage=`radial-gradient(circle at 32% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 42%),radial-gradient(circle at 70% 75%,rgba(0,0,0,.25),rgba(0,0,0,0) 50%),linear-gradient(${hex},${hex})`;
+  sampleHex.textContent=hex;
+
+  /* ranked list (up to 10) */
+  const lab=rgbLab(Math.round(r),Math.round(g),Math.round(b));
+  const arr=palette.map(p=>({p,dist:Math.sqrt((p.lab[0]-lab[0])**2+(p.lab[1]-lab[1])**2+(p.lab[2]-lab[2])**2)}));
+  arr.sort((a,b)=>a.dist-b.dist);
+  rankPanel.classList.remove("hidden");
+  rankList.innerHTML="";
+  arr.slice(0,10).forEach((it,i)=>{
+    const div=document.createElement("div");
+    div.className="rank-item"+(i===0?" top":"");
+    const p=it.p;
+    div.innerHTML=`<span class="sw" style="background:${p.hex}"></span>`+
+      `<span class="nm"><b>${p.name}</b><span>${p.code||""}${p.sku?" \u00b7 "+p.sku:""}</span></span>`+
+      `<span class="sco">${pctColor(it.dist)}%</span>`;
+    div.onclick=()=>{toast(p.name)};
+    rankList.appendChild(div);
+  });
+});
+
+copyBtn.addEventListener("click",()=>{
+  if(!lastResult)return;
+  const {hex,pal,dlab}={...lastResult};
+  const code=pal.code||"?";
+  const txt="Perler Color Finder\n\nSampled: "+hex+"\nClosest Perler: "+pal.name+" ("+code+")"+(pal.sku?"  SKU "+pal.sku:"")+"\nHex: "+pal.hex+"\nDistance (E): "+dlab.toFixed(1);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast("Copied match details!")).catch(()=>toast("Couldn't copy"));
+  }else{toast(txt)}
+});
+})();
+</script>
+</body>
+</html>
