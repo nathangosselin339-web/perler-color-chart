@@ -8,6 +8,8 @@ Free browser tools for Perler fuse beads. No installs, no accounts, no ads, no t
 
 **Bead Studio:** https://nathangosselin339-web.github.io/perler-color-chart/perler-bead-studio.html
 
+**Color Finder:** https://nathangosselin339-web.github.io/perler-color-chart/perler-color-finder.html
+
 ## Color Chart
 
 A reference of every numbered Perler fuse bead color sold in the US — 170 colors including the 2026 releases.
@@ -46,6 +48,17 @@ An all-in-one studio that combines a full color inventory with the image-to-patt
 - Clear status banner shows exactly which owned colors each pattern was built from
 - If you haven't checked off any owned colors, it gracefully falls back to the full palette so you can still see your pattern
 - Color checklist, auto-generated shopping list of colors you still need, and PNG export
+
+## Color Finder
+
+Take a photo of a bead and instantly find which Perler color it is.
+
+- **Take a photo** with your phone/PC camera (rear camera by default), or choose/upload an image file
+- **Tap any point on the photo** to sample that bead's color — it averages a small area around your tap
+- Finds the **single closest Perler color** in perceptual (Lab) color space, scanning the real 170-color US palette
+- Shows name, Perler code, bag SKU and a closeness score (ΔE + %), with a side-by-side sampled-vs-matched swatch
+- **Top-10 nearest colors** ranked list for comparison
+- **Copy match details** button exports the sample and match to the clipboard
 
 ## Notes
 
