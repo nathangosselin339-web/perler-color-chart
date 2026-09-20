@@ -72,6 +72,7 @@ button.mini:hover{border-color:#46506a;background:#20242f}
 .smode-help{font-size:.72rem;color:var(--dim);max-width:520px}
 .chip.pick{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .chip.pick:hover{color:#fff}
+.dim{font-size:.75rem;color:var(--dim);font-family:Consolas,monospace;background:var(--panel);border:1px solid var(--line);padding:4px 9px;border-radius:8px;white-space:nowrap}
 .empty{color:var(--dim);text-align:center;padding:30px 10px;font-size:.9rem}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#fff;padding:9px 20px;border-radius:999px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:9}
 .toast.show{opacity:1;transform:translateX(-50%)}
@@ -91,16 +92,20 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
 
     <div id="work" class="hidden">
       <div class="controls">
-        <label>Board width <input id="wRange" type="range" min="10" max="128" value="29"> <b id="wVal" style="min-width:3ch">29</b></label>
-        <span id="presets" class="presets"></span>
-        <span id="spritePresets" class="presets hidden"></span>
+        <label>Width <input id="wRange" type="range" min="4" max="320" value="29"> <b id="wVal" style="min-width:3ch">29</b></label>
+        <span id="dim" class="dim"></span>
         <label>Zoom <input id="zRange" type="range" min="4" max="36" value="14"></label>
         <button class="act pri" id="savePng">Save PNG</button>
+      </div>
+      <div class="controls">
+        <span id="presets" class="presets"></span>
+        <span id="spritePresets" class="presets hidden"></span>
+        <button class="chip" id="oneToOne">1&thinsp;:&thinsp;1 exact</button>
       </div>
       <div class="controls smode">
         <button class="chip" id="spriteOff">Photo mode</button>
         <button class="chip on" id="spriteOn">Sprite mode</button>
-        <span class="smode-help">Sprites &amp; pixel art: keeps crisp edges, maps each pixel to its closest bead, keeps transparency clear.</span>
+        <span class="smode-help">Sprites &amp; pixel art: each sprite pixel becomes one bead (1&thinsp;:&thinsp;1), keeps crisp edges and transparency clear.</span>
       </div>
       <div class="controls" id="typeChips"></div>
       <div class="canvaswrap"><canvas id="cv"></canvas></div>
@@ -334,21 +339,30 @@ document.getElementById("palInfo").textContent=`${PAL.length} colors available`;
 
 const wRange=document.getElementById("wRange"),wVal=document.getElementById("wVal");
 const presetsEl=document.getElementById("presets"),spritePresetsEl=document.getElementById("spritePresets");
-let spriteMode=true;
-function setW(n){wRange.value=n;cellW=n;wVal.textContent=n;if(img)process()}
+const dimEl=document.getElementById("dim"),oneToOneBtn=document.getElementById("oneToOne");
+let spriteMode=true,snapSquare=true;
+function showDim(){
+  if(!img){dimEl.textContent="";return}
+  const bw=Math.max(1,Math.ceil(cellW/29)),bh=Math.max(1,Math.ceil(cellH/29));
+  dimEl.textContent=`${bw}\u00d7${bh} board${bw===1&&bh===1?"":"s"} \u00b7 ${cellW} \u00d7 ${cellH}${spriteMode&&cellW===img.width&&cellH===img.height?" (1:1)":""}`;
+}
+function setW(n){snapSquare=true;wRange.value=n;cellW=n;wVal.textContent=n;if(img)process()}
 function setSquare(n){wRange.value=n;cellW=n;cellH=n;wVal.textContent=n;if(img)process()}
-[[29,"29 wide (1 board)"],[58,"58 wide"],[87,"87 wide"],[116,"116 wide"]].forEach(([n,title])=>{
+function setBoardGrid(n){snapSquare=true;wRange.value=n;cellW=n;cellH=n;wVal.textContent=n;if(img)process()}
+function setOneToOne(){if(!img)return;snapSquare=false;cellW=img.width;cellH=img.height;wRange.value=cellW;wVal.textContent=cellW;process()}
+[[1,29],[2,58],[3,87],[4,116]].forEach(([grid,size])=>{
   const b=document.createElement("button");
-  b.className="preset";b.textContent=n;b.title=title;
-  b.onclick=()=>setW(n);
+  b.className="preset";b.textContent=grid+"\u00d7"+grid;b.title=`${grid}\u00d7${grid} pegboards \u2014 ${size}\u00d7${size} pegs`;
+  b.onclick=()=>setBoardGrid(size);
   presetsEl.appendChild(b);
 });
 [[16,"16 x 16"],[24,"24 x 24"],[29,"29 x 29"],[32,"32 x 32"],[48,"48 x 48"],[64,"64 x 64"],[96,"96 x 96"],[128,"128 x 128"]].forEach(([n,title])=>{
   const b=document.createElement("button");
-  b.className="preset sprite";b.textContent=n;b.title="Sprite "+title;
+  b.className="preset sprite";b.textContent=n+"\u00d7"+n;b.title="Sprite "+title;
   b.onclick=()=>setSquare(n);
   spritePresetsEl.appendChild(b);
 });
+oneToOneBtn.onclick=setOneToOne;
 document.getElementById("wRange").oninput=e=>setW(+e.target.value);
 document.getElementById("zRange").oninput=e=>{zoomPx=+e.target.value;if(map)render()};
 document.getElementById("hideOwned").onchange=renderList;
@@ -360,6 +374,7 @@ function setMode(sprite){
   presetsEl.classList.toggle("hidden",sprite);
   spritePresetsEl.classList.toggle("hidden",!sprite);
   document.querySelectorAll(".preset.sprite").forEach(b=>b.classList.toggle("pick",sprite));
+  oneToOneBtn.classList.toggle("hidden",!sprite);
   if(img)process();
 }
 btnOn.onclick=()=>setMode(true);
@@ -375,14 +390,10 @@ addEventListener("paste",e=>{for(const it of e.clipboardData.items)if(it.type.st
 function load(file){
   const url=URL.createObjectURL(file),im=new Image();
   im.onload=()=>{
-    img=im;URL.revokeObjectURL(url);work.classList.remove("hidden");
+    img=im;URL.revokeObjectURL(url);work.classList.remove("hidden");snapSquare=true;
     if(spriteMode){
-      const maxSide=Math.max(img.width,img.height);
-      const d=Math.min(128,Math.max(16,maxSide));
-      const s=d/Math.max(1,maxSide);
-      cellW=Math.max(4,Math.round(img.width*s));
-      cellH=Math.max(4,Math.round(img.height*s));
-      wRange.value=cellW;wVal.textContent=cellW;
+      cellW=img.width;cellH=img.height;
+      wRange.value=img.width;wVal.textContent=img.width;
     }
     process();
   };
@@ -397,11 +408,13 @@ function process(){
   }
   render();
   renderList();
+  showDim();
 }
 
 function processPhoto(){
   const aspect=img.height/img.width;
-  cellH=Math.max(1,Math.round(cellW*aspect));
+  if(snapSquare&&cellW%29===0) cellH=cellW;
+  else cellH=Math.max(1,Math.round(cellW*aspect));
   const off=document.createElement("canvas");
   const sc=Math.min(1,Math.sqrt(cellW*cellH/(img.width*img.height))*4);
   off.width=Math.max(cellW,Math.round(img.width*Math.min(1,sc)));

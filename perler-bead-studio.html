@@ -418,23 +418,23 @@ const patCv=document.getElementById("patternCanvas");
 const patCtx=patCv.getContext("2d");
 const ownOnlyEl=document.getElementById("ownOnly");
 
-const PRESETS=[[29,"1 board"],[58,"2 boards"],[87,"3 boards"],[116,"4 boards"]];
+const PRESETS=[[1,29],[2,58],[3,87],[4,116]];
 const presetsEl=document.getElementById("presets");
 const spritePresetsEl=document.getElementById("spritePresets");
 const spriteOnEl=document.getElementById("spriteOn");
 const spriteOffEl=document.getElementById("spriteOff");
 const oneToOneEl=document.getElementById("oneToOne");
-let spriteMode=true;
+let spriteMode=true,snapSquare=true;
 
-PRESETS.forEach(([n,title])=>{
+PRESETS.forEach(([grid,size])=>{
   const b=document.createElement("button");
-  b.className="preset";b.textContent=n;b.title=title;
-  b.addEventListener("click",()=>setPhotoW(n));
+  b.className="preset";b.textContent=grid+"\u00d7"+grid;b.title=`${grid}\u00d7${grid} pegboards \u2014 ${size}\u00d7${size} pegs`;
+  b.addEventListener("click",()=>setBoardGrid(size));
   presetsEl.appendChild(b);
 });
 [[16,"16"],[24,"24"],[29,"29"],[32,"32"],[48,"48"],[64,"64"],[96,"96"],[128,"128"]].forEach(([n])=>{
   const b=document.createElement("button");
-  b.className="preset sprite";b.textContent=n;b.title="Sprite "+n+" x "+n;
+  b.className="preset sprite";b.textContent=n+"\u00d7"+n;b.title="Sprite "+n+" x "+n;
   b.addEventListener("click",()=>setSquare(n));
   spritePresetsEl.appendChild(b);
 });
@@ -442,7 +442,8 @@ PRESETS.forEach(([n,title])=>{
 function syncW(){document.getElementById("wRange").value=cellW;document.getElementById("wVal").textContent=cellW}
 function setPhotoW(n){cellW=n;syncW();if(img)processImage()}
 function setSquare(n){cellW=n;cellH=n;syncW();if(img)processImage()}
-document.getElementById("wRange").addEventListener("input",e=>{cellW=+e.target.value;document.getElementById("wVal").textContent=cellW;if(img)processImage()});
+function setBoardGrid(n){snapSquare=true;cellW=n;cellH=n;syncW();if(img)processImage()}
+document.getElementById("wRange").addEventListener("input",e=>{cellW=+e.target.value;snapSquare=true;document.getElementById("wVal").textContent=cellW;if(img)processImage()});
 document.getElementById("zRange").addEventListener("input",e=>{zoomPx=+e.target.value;if(patMap)renderPattern()});
 
 function setMode(sprite){
@@ -458,6 +459,7 @@ spriteOnEl.addEventListener("click",()=>setMode(true));
 spriteOffEl.addEventListener("click",()=>setMode(false));
 oneToOneEl.addEventListener("click",()=>{
   if(!img)return;
+  snapSquare=false;
   cellW=img.width;cellH=img.height;syncW();
   processImage();
 });
@@ -471,7 +473,7 @@ document.addEventListener("paste",e=>{for(const it of e.clipboardData.items)if(i
 function loadImage(file){
   const url=URL.createObjectURL(file),im=new Image();
   im.onload=()=>{
-    img=im;URL.revokeObjectURL(url);
+    img=im;URL.revokeObjectURL(url);snapSquare=true;
     const small=img.width<=160&&img.height<=160;
     setMode(small);
     if(spriteMode){cellW=img.width;cellH=img.height;}
@@ -537,7 +539,8 @@ function processImage(){
     }
   }else{
     const aspect=img.height/img.width;
-    cellH=Math.max(1,Math.round(cellW*aspect));
+    if(snapSquare&&cellW%29===0) cellH=cellW;
+    else cellH=Math.max(1,Math.round(cellW*aspect));
     const off=document.createElement("canvas");
     off.width=Math.max(cellW,Math.round(img.width*.8));
     off.height=Math.max(cellH,Math.round(img.height*.8));
@@ -563,7 +566,8 @@ function processImage(){
       patMap.push(row);
     }
   }
-  document.getElementById("dimLabel").textContent=`${cellW} \u00d7 ${cellH}${spriteMode?((cellW===img.width&&cellH===img.height)?" (1:1)":""):""}`;
+  const bw=Math.max(1,Math.ceil(cellW/29)),bh=Math.max(1,Math.ceil(cellH/29));
+  document.getElementById("dimLabel").textContent=`${bw}\u00d7${bh} board${bw===1&&bh===1?"":"s"} \u00b7 ${cellW} \u00d7 ${cellH}${spriteMode?((cellW===img.width&&cellH===img.height)?" (1:1)":""):""}`;
   const mi=document.getElementById("matchInfo");
   const note=document.getElementById("patternSourceNote");
   const modeTxt=spriteMode?"sprite":"photo";

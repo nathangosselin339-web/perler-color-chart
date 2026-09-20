@@ -19,15 +19,16 @@ A reference of every numbered Perler fuse bead color sold in the US — 170 colo
 - Click any card to copy its hex value
 - Each card shows the official color name, Perler code, bag SKU (1,000-bead bag number) and sampled hex
 - New colors are badged automatically
+- One-click palette downloads: Paint.NET `.txt` palettes (split into Solids / New Colors / Specialty because Paint.NET only shows 96 colors per palette) plus a single GIMP `.gpl` with all 151 single-color beads
 
 ## Pattern Maker
 
 Turn any image into a fuse-bead pattern using the real Perler palette.
 
 - Click, drag-and-drop or paste an image (nothing is uploaded — it never leaves your device)
-- **Sprite mode (default)** — great for pixel art and game sprites (Pokémon, etc.): loads each sprite pixel as exactly one bead (true 1:1, no downscaling), keeps crisp edges, maps each pixel to its closest bead, and keeps transparent backgrounds clear. The live dimension readout shows the board size and a `(1:1)` marker when every sprite pixel is one bead.
-- **Photo mode** — smooth, averaged matching for ordinary photos and gradients
-- Board width slider plus one-click presets for standard 29-peg boards (1–4 wide), sprite-size presets (16/24/29/32/48/64/96/128 square) for resampling, and a **1 : 1 exact** button to snap back to true 1:1
+- **Sprite mode (default)** — great for pixel art and game sprites (Pokémon, etc.): loads each sprite pixel as exactly one bead (true 1:1, no downscaling), keeps crisp edges, maps each pixel to its closest bead, and keeps transparent backgrounds clear. The live dimension readout shows the pegboards the pattern needs first, then its exact size (e.g. `2×2 boards · 58 × 44`), with a `(1:1)` marker when every sprite pixel is one bead.
+- **Photo mode** — smooth, averaged matching for ordinary photos and gradients; when the width is a whole number of 29-peg boards the height snaps to match (58 wide → 58×58), or dial in any other width for aspect-preserving output
+- Board width slider plus one-click pegboard-grid presets (1×1, 2×2, 3×3, 4×4 = 29×29, 58×58, 87×87, 116×116 pegs), labelled square sprite-size presets (16/24/29/32/48/64/96/128) for resampling, and a **1 : 1 exact** button to snap back to true 1:1
 - Zoom slider for comfortable viewing
 - Every pixel is matched to the closest real bead color in perceptual (Lab) color space
 - Filter which bead types the matcher may use
