@@ -353,7 +353,7 @@ function setOneToOne(){if(!img)return;snapSquare=false;cellW=img.width;cellH=img
 [[1,29],[2,58],[3,87],[4,116]].forEach(([grid,size])=>{
   const b=document.createElement("button");
   b.className="preset";b.textContent=grid+"\u00d7"+grid;b.title=`${grid}\u00d7${grid} pegboards \u2014 ${size}\u00d7${size} pegs`;
-  b.onclick=()=>setBoardGrid(size);
+  b.onclick=()=>{if(spriteMode)setMode(false);setBoardGrid(size)};
   presetsEl.appendChild(b);
 });
 [[16,"16 x 16"],[24,"24 x 24"],[29,"29 x 29"],[32,"32 x 32"],[48,"48 x 48"],[64,"64 x 64"],[96,"96 x 96"],[128,"128 x 128"]].forEach(([n,title])=>{
@@ -371,7 +371,6 @@ const btnOff=document.getElementById("spriteOff"),btnOn=document.getElementById(
 function setMode(sprite){
   spriteMode=sprite;
   btnOn.classList.toggle("on",sprite);btnOff.classList.toggle("on",!sprite);
-  presetsEl.classList.toggle("hidden",sprite);
   spritePresetsEl.classList.toggle("hidden",!sprite);
   document.querySelectorAll(".preset.sprite").forEach(b=>b.classList.toggle("pick",sprite));
   oneToOneBtn.classList.toggle("hidden",!sprite);

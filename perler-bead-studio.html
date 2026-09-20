@@ -429,7 +429,7 @@ let spriteMode=true,snapSquare=true;
 PRESETS.forEach(([grid,size])=>{
   const b=document.createElement("button");
   b.className="preset";b.textContent=grid+"\u00d7"+grid;b.title=`${grid}\u00d7${grid} pegboards \u2014 ${size}\u00d7${size} pegs`;
-  b.addEventListener("click",()=>setBoardGrid(size));
+  b.addEventListener("click",()=>{if(spriteMode)setMode(false);setBoardGrid(size)});
   presetsEl.appendChild(b);
 });
 [[16,"16"],[24,"24"],[29,"29"],[32,"32"],[48,"48"],[64,"64"],[96,"96"],[128,"128"]].forEach(([n])=>{
@@ -450,7 +450,6 @@ function setMode(sprite){
   spriteMode=sprite;
   spriteOnEl.classList.toggle("on",sprite);
   spriteOffEl.classList.toggle("on",!sprite);
-  presetsEl.classList.toggle("hidden",sprite);
   spritePresetsEl.classList.toggle("hidden",!sprite);
   oneToOneEl.classList.toggle("hidden",!sprite);
   if(img)processImage();
