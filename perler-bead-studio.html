@@ -159,12 +159,15 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
   <div class="panel" id="uploadPanel" style="margin-bottom:16px">
     <div class="section-title"><span class="icon" style="background:var(--accent);color:#fff">!</span>Image &rarr; Bead Pattern</div>
     <div id="dropZone"><b>Click, drop or paste an image</b>Converts your image to a Perler bead pattern<span class="hint">Supported: PNG, JPG, GIF, WebP &middot; or Ctrl+V to paste from clipboard</span></div>
+    <div class="ctrl-row">
+      <span style="font-size:.72rem;color:var(--dim)">Pegboards:</span>
+      <span class="presets" id="presets"></span>
+      <span class="presets hidden" id="spritePresets"></span>
+    </div>
     <div id="patternWork" class="hidden">
       <div class="ctrl-row">
         <label>Width <input id="wRange" type="range" min="4" max="320" value="29"> <b id="wVal" style="min-width:3ch;color:var(--text)">29</b></label>
         <span id="dimLabel" style="font-size:.75rem;color:var(--dim);font-family:Consolas,monospace;white-space:nowrap"></span>
-        <span class="presets" id="presets"></span>
-        <span class="presets hidden" id="spritePresets"></span>
         <label>Zoom <input id="zRange" type="range" min="4" max="40" value="14"></label>
         <button class="act pri" id="exportBtn">Export PNG</button>
       </div>

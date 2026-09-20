@@ -90,17 +90,19 @@ footer{max-width:1400px;margin:8px auto 30px;padding:0 20px;color:var(--dim);fon
   <div class="panel left">
     <div id="drop"><b>Click, drop or paste an image</b><br>It becomes a bead pattern below</div>
 
+    <div class="controls">
+      <span style="font-size:.72rem;color:var(--dim)">Pegboards:</span>
+      <span id="presets" class="presets"></span>
+      <span id="spritePresets" class="presets hidden"></span>
+      <button class="chip" id="oneToOne">1&thinsp;:&thinsp;1 exact</button>
+    </div>
+
     <div id="work" class="hidden">
       <div class="controls">
         <label>Width <input id="wRange" type="range" min="4" max="320" value="29"> <b id="wVal" style="min-width:3ch">29</b></label>
         <span id="dim" class="dim"></span>
         <label>Zoom <input id="zRange" type="range" min="4" max="36" value="14"></label>
         <button class="act pri" id="savePng">Save PNG</button>
-      </div>
-      <div class="controls">
-        <span id="presets" class="presets"></span>
-        <span id="spritePresets" class="presets hidden"></span>
-        <button class="chip" id="oneToOne">1&thinsp;:&thinsp;1 exact</button>
       </div>
       <div class="controls smode">
         <button class="chip" id="spriteOff">Photo mode</button>
